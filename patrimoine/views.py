@@ -1,4 +1,4 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from .models import Patrimoine
 import folium
@@ -11,10 +11,7 @@ def dashboard(request):
 
     patrimoines = Patrimoine.objects.filter(user=request.user)
 
-    # ------------------------
     # CENTRAGE INTELLIGENT
-    # ------------------------
-
     if patrimoines.exists():
         center_lat = mean([p.latitude for p in patrimoines])
         center_lng = mean([p.longitude for p in patrimoines])
@@ -22,26 +19,17 @@ def dashboard(request):
         center_lat = 6.13
         center_lng = 1.22
 
-    # ------------------------
     # CREATION CARTE
-    # ------------------------
-
     map = folium.Map(location=[center_lat, center_lng], zoom_start=13)
 
-    # ------------------------
     # MARQUEUR UTILISATEUR
-    # ------------------------
-
     folium.Marker(
         [center_lat, center_lng],
         popup="Vous êtes ici",
         icon=folium.Icon(color="blue", icon="user")
     ).add_to(map)
 
-    # ------------------------
     # MARKERS PATRIMOINES
-    # ------------------------
-
     for p in patrimoines:
         folium.Marker(
             [p.latitude, p.longitude],
@@ -59,7 +47,7 @@ def dashboard(request):
     })
 
 
-# ✅ AJOUT PATRIMOINE (AJAX)
+# AJOUT PATRIMOINE
 @login_required
 def add_patrimoine(request):
     
@@ -82,7 +70,45 @@ def add_patrimoine(request):
     return JsonResponse({"status": "error", "message": "Méthode non autorisée"})
 
 
-# ✅ EXPORT GPX 🔥
+# ÉDITION PATRIMOINE
+@login_required
+def edit_patrimoine(request, patrimoine_id):
+    patrimoine = get_object_or_404(Patrimoine, id=patrimoine_id, user=request.user)
+    
+    if request.method == "POST":
+        nom = request.POST.get("nom")
+        lat = request.POST.get("latitude")
+        lng = request.POST.get("longitude")
+
+        try:
+            patrimoine.nom = nom
+            patrimoine.latitude = float(lat)
+            patrimoine.longitude = float(lng)
+            patrimoine.save()
+            
+            return JsonResponse({"status": "success", "message": "Patrimoine modifié"})
+        except Exception as e:
+            return JsonResponse({"status": "error", "message": str(e)})
+    
+    return JsonResponse({"status": "error", "message": "Méthode non autorisée"})
+
+
+# SUPPRESSION PATRIMOINE
+@login_required
+def delete_patrimoine(request, patrimoine_id):
+    patrimoine = get_object_or_404(Patrimoine, id=patrimoine_id, user=request.user)
+    
+    if request.method == "POST":
+        try:
+            patrimoine.delete()
+            return JsonResponse({"status": "success", "message": "Patrimoine supprimé"})
+        except Exception as e:
+            return JsonResponse({"status": "error", "message": str(e)})
+    
+    return JsonResponse({"status": "error", "message": "Méthode non autorisée"})
+
+
+# EXPORT GPX
 @login_required
 def export_gpx(request):
 
