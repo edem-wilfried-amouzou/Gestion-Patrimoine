@@ -2,162 +2,365 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Gestion Patrimoine</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 
 <body class="bg-slate-100">
+    <div class="flex h-screen">
+        <!-- SIDEBAR -->
+        <aside class="w-80 bg-slate-900 text-white p-6">
+            <h1 class="text-2xl font-bold mb-10">Gestion Patrimoine</h1>
 
-<div class="flex h-screen">
+            <button
+                onclick="startAdding()"
+                class="w-full bg-blue-500 hover:bg-blue-600 p-2 rounded-lg mb-4 text-white font-medium"
+            >
+                ➕ Ajouter Patrimoine
+            </button>
 
-    <!-- SIDEBAR -->
-    <aside class="w-64 bg-slate-900 text-white p-6">
+            <a
+                href="/export-gpx/"
+                class="block w-full bg-green-500 hover:bg-green-600 p-2 rounded-lg text-center text-white font-medium"
+            >
+                📥 Export GPX
+            </a>
 
-        <h1 class="text-2xl font-bold mb-10">
-            Gestion Patrimoine
-        </h1>
+            <!-- FORMULAIRE -->
+            <div id="formulaire" class="mt-6">
+                <div class="bg-yellow-500 text-black p-2 rounded mb-3 text-sm font-medium">
+                    👆 Cliquez sur la carte pour placer un marqueur
+                </div>
 
-        <button onclick="openModal()"
-                class="w-full bg-blue-500 hover:bg-blue-600 p-2 rounded-lg mb-3">
-            ➕ Ajouter Patrimoine
-        </button>
+                <input
+                    id="nom"
+                    type="text"
+                    placeholder="Nom du patrimoine"
+                    class="w-full p-2 rounded text-black mb-3"
+                />
 
-        <a href="/itineraire/"
-           class="block text-center bg-purple-500 hover:bg-purple-600 p-2 rounded-lg">
-            🧭 Voir Itinéraire
-        </a>
+                <input
+                    id="latitude"
+                    type="text"
+                    placeholder="Latitude (cliquez sur la carte)"
+                    class="w-full p-2 rounded text-black mb-3 bg-gray-100"
+                    readonly
+                />
 
-        <p class="text-sm text-gray-400 mt-6">
-            Cliquez sur la carte
-        </p>
+                <input
+                    id="longitude"
+                    type="text"
+                    placeholder="Longitude (cliquez sur la carte)"
+                    class="w-full p-2 rounded text-black mb-3 bg-gray-100"
+                    readonly
+                />
 
-    </aside>
-
-    <!-- MAIN -->
-    <main class="flex-1 p-6">
-
-        <div class="bg-white rounded-xl shadow p-4 mb-4">
-            Bienvenue {{ request.user.username }}
-        </div>
-
-        <div class="bg-white rounded-xl shadow p-4 h-[85%]">
-            {{ map|safe }}
-        </div>
-
-    </main>
-
-</div>
-
-<!-- MODAL -->
-<div id="modal"
-     class="hidden fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center">
-
-    <div class="bg-white p-6 rounded-xl w-96">
-
-        <h2 class="text-xl font-bold mb-4">Ajouter Patrimoine</h2>
-
-        <form method="post">
-            {% csrf_token %}
-
-            <input type="text" name="nom" placeholder="Nom"
-                   class="w-full border p-2 rounded mb-3">
-
-            <input type="hidden" name="latitude" id="latitude">
-            <input type="hidden" name="longitude" id="longitude">
-
-            <div class="flex justify-between">
-                <button type="button" onclick="closeModal()">
-                    Annuler
-                </button>
-
-                <button class="bg-slate-900 text-white px-4 py-2 rounded">
-                    Ajouter
+                <button
+                    onclick="savePatrimoine()"
+                    class="w-full bg-white text-slate-900 p-2 rounded hover:bg-gray-200 font-medium"
+                >
+                    ✅ Enregistrer
                 </button>
             </div>
+        </aside>
 
-        </form>
+        <!-- MAIN CONTENT -->
+        <main class="flex-1 p-6">
+            <div class="bg-white rounded-xl shadow p-4 mb-4">
+                Bienvenue {{ request.user.username }}
+            </div>
 
+            <div class="bg-white rounded-xl shadow p-4 h-[85%]">
+                <div id="map" style="height: 100%; width: 100%;">
+                    {{ map|safe }}
+                </div>
+            </div>
+        </main>
     </div>
-</div>
 
 <script>
+let marker = null;
+let mapInstance = null;
+let maxRetries = 50;
+let retryCount = 0;
 
-setTimeout(() => {
-
-    // 🔥 Récupérer EXACTEMENT la map Folium
-    const mapElement = document.querySelector('.folium-map');
-    const mapId = mapElement.id;
-
-    const map = window[mapId];
-
-    let tempMarker;
-
-    map.on('click', function(e) {
-
-        const lat = e.latlng.lat;
-        const lng = e.latlng.lng;
-
-        document.getElementById('latitude').value = lat;
-        document.getElementById('longitude').value = lng;
-
-        if (tempMarker) map.removeLayer(tempMarker);
-
-        tempMarker = L.marker([lat, lng], {
-            draggable: true
-        }).addTo(map);
-
-        tempMarker.on('dragend', function(event) {
-            const pos = event.target.getLatLng();
-            document.getElementById('latitude').value = pos.lat;
-            document.getElementById('longitude').value = pos.lng;
-        });
-
-        openModal();
-    });
-
-}, 800);  // 👈 délai un peu plus long = plus stable
-
-function deletePatrimoine(id) {
-    fetch(`/delete/${id}/`)
-        .then(() => location.reload());
+function startAdding() {
+    document.getElementById("nom").value = "";
+    document.getElementById("latitude").value = "";
+    document.getElementById("longitude").value = "";
+    
+    if (marker && mapInstance) {
+        mapInstance.removeLayer(marker);
+        marker = null;
+    }
+    
+    alert("✅ Mode ajout activé ! Cliquez maintenant sur la carte.");
 }
 
-function openModal() {
-    document.getElementById('modal').classList.remove('hidden');
+// MÉTHODE ULTRA AGRESSIVE pour trouver Leaflet
+function findLeafletMap() {
+    console.log("🔍 Inspection du DOM pour Leaflet...");
+    
+    // Liste tous les objets window qui pourraient être des cartes
+    const windowKeys = Object.keys(window);
+    console.log("📋 Clés de window contenant 'map':", windowKeys.filter(k => k.toLowerCase().includes('map')));
+    
+    // Méthode 1: Chercher TOUTES les instances de L.Map
+    if (typeof L !== 'undefined' && L.Map) {
+        console.log("✅ Leaflet (L) est défini");
+        
+        // Parcourir tous les objets de window
+        for (let key in window) {
+            try {
+                const obj = window[key];
+                if (obj instanceof L.Map) {
+                    console.log("✅✅✅ CARTE TROUVÉE via instanceof L.Map:", key);
+                    return obj;
+                }
+            } catch(e) {}
+        }
+    } else {
+        console.log("⚠️ Leaflet (L) n'est pas encore défini");
+    }
+    
+    // Méthode 2: Chercher dans les iframes (Folium utilise parfois des iframes)
+    const iframes = document.querySelectorAll('iframe');
+    console.log("📦 iframes trouvés:", iframes.length);
+    
+    for (let iframe of iframes) {
+        try {
+            const iframeWindow = iframe.contentWindow;
+            const iframeL = iframeWindow.L;
+            
+            if (iframeL) {
+                console.log("✅ Leaflet trouvé dans iframe");
+                
+                for (let key in iframeWindow) {
+                    try {
+                        if (iframeWindow[key] instanceof iframeL.Map) {
+                            console.log("✅✅✅ CARTE TROUVÉE dans iframe:", key);
+                            return iframeWindow[key];
+                        }
+                    } catch(e) {}
+                }
+            }
+        } catch(e) {
+            console.log("⚠️ Impossible d'accéder à l'iframe (CORS)");
+        }
+    }
+    
+    // Méthode 3: Inspecter les divs avec _leaflet_id
+    const allElements = document.querySelectorAll('*');
+    let leafletDivs = [];
+    
+    for (let el of allElements) {
+        if (el._leaflet_id !== undefined) {
+            leafletDivs.push(el);
+            console.log("📍 Élément avec _leaflet_id trouvé:", el.id || el.className, "_leaflet_id:", el._leaflet_id);
+        }
+    }
+    
+    // Essayer de trouver l'objet Map associé à ces divs
+    if (typeof L !== 'undefined') {
+        for (let div of leafletDivs) {
+            // Chercher dans window un objet dont le _container est cette div
+            for (let key in window) {
+                try {
+                    if (window[key] && 
+                        typeof window[key] === 'object' &&
+                        window[key]._container === div) {
+                        console.log("✅✅✅ CARTE TROUVÉE via _container match:", key);
+                        return window[key];
+                    }
+                } catch(e) {}
+            }
+        }
+    }
+    
+    // Méthode 4: Parser le HTML de Folium pour trouver le nom de variable
+    const mapDiv = document.getElementById('map');
+    if (mapDiv) {
+        const scripts = mapDiv.querySelectorAll('script');
+        console.log("📜 Scripts dans #map:", scripts.length);
+        
+        for (let script of scripts) {
+            const content = script.textContent;
+            
+            // Chercher des patterns comme "var map_XXXXX = L.map"
+            const mapVarMatch = content.match(/var\s+(map_\w+)\s*=/);
+            if (mapVarMatch) {
+                const varName = mapVarMatch[1];
+                console.log("🎯 Variable de carte trouvée:", varName);
+                
+                if (window[varName]) {
+                    console.log("✅✅✅ CARTE TROUVÉE via nom de variable:", varName);
+                    return window[varName];
+                }
+            }
+        }
+    }
+    
+    console.log("❌ Aucune carte trouvée dans cette tentative");
+    return null;
 }
 
-function closeModal() {
-    document.getElementById('modal').classList.add('hidden');
+// Setup avec retry
+function setupMapClickListener() {
+    if (retryCount >= maxRetries) {
+        console.error("❌❌❌ ÉCHEC TOTAL après " + maxRetries + " tentatives");
+        
+        // Debug final
+        console.log("🔍 Debug final:");
+        console.log("- typeof L:", typeof L);
+        console.log("- Iframes:", document.querySelectorAll('iframe').length);
+        console.log("- Divs avec _leaflet_id:", document.querySelectorAll('[_leaflet_id]').length);
+        
+        alert("⚠️ ERREUR: Impossible d'initialiser la carte.\n\nEnvoyez cette info au développeur:\n- Leaflet défini: " + (typeof L !== 'undefined') + "\n- Iframes: " + document.querySelectorAll('iframe').length);
+        return;
+    }
+    
+    mapInstance = findLeafletMap();
+    
+    if (!mapInstance) {
+        retryCount++;
+        console.log("⏳ Tentative " + retryCount + "/" + maxRetries);
+        setTimeout(setupMapClickListener, 300);
+        return;
+    }
+
+    console.log("🎉🎉🎉 CARTE TROUVÉE ET PRÊTE !");
+    console.log("📍 Objet carte:", mapInstance);
+    console.log("📦 Container:", mapInstance._container);
+
+    // Attacher l'événement de clic
+    try {
+        mapInstance.on("click", handleMapClick);
+        console.log("✅ Écouteur de clic attaché avec succès");
+    } catch(e) {
+        console.error("❌ Erreur lors de l'attachement de l'écouteur:", e);
+    }
+    
+    // Style du curseur
+    if (mapInstance._container) {
+        mapInstance._container.style.cursor = "crosshair";
+    }
+
+    console.log("👆👆👆 VOUS POUVEZ MAINTENANT CLIQUER SUR LA CARTE !");
 }
 
+// Gestion du clic sur la carte
+function handleMapClick(e) {
+    const lat = e.latlng.lat.toFixed(6);
+    const lng = e.latlng.lng.toFixed(6);
 
+    console.log("🎯🎯🎯 CLIC DÉTECTÉ ! Latitude:", lat, "Longitude:", lng);
 
-map.eachLayer(function(layer) {
+    // Remplir les champs
+    document.getElementById("latitude").value = lat;
+    document.getElementById("longitude").value = lng;
 
-    if (layer instanceof L.Marker && layer !== tempMarker) {
+    // Gérer le marqueur
+    if (marker) {
+        marker.setLatLng(e.latlng);
+        console.log("🔄 Marqueur déplacé");
+    } else {
+        marker = L.marker(e.latlng, { 
+            draggable: true,
+            title: "Glissez pour ajuster"
+        }).addTo(mapInstance);
+        
+        console.log("📍 Nouveau marqueur créé");
 
-        layer.dragging.enable();  // 😎 DRAG ACTIF
-
-        layer.on('dragend', function(event) {
-
-            const pos = event.target.getLatLng();
-
-            const id = layer._popup._content.match(/deletePatrimoine\((\d+)\)/)[1];
-
-            fetch(`/update/${id}/`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/x-www-form-urlencoded",
-                    "X-CSRFToken": document.querySelector('[name=csrfmiddlewaretoken]').value
-                },
-                body: `latitude=${pos.lat}&longitude=${pos.lng}`
-            });
+        // Événement drag
+        marker.on("dragend", function() {
+            const position = marker.getLatLng();
+            const newLat = position.lat.toFixed(6);
+            const newLng = position.lng.toFixed(6);
+            
+            document.getElementById("latitude").value = newLat;
+            document.getElementById("longitude").value = newLng;
+            
+            console.log("🔄 Marqueur glissé vers:", newLat, newLng);
         });
     }
+
+    // Animation visuelle
+    const latInput = document.getElementById("latitude");
+    const lngInput = document.getElementById("longitude");
+    
+    latInput.classList.add("ring-2", "ring-green-500");
+    lngInput.classList.add("ring-2", "ring-green-500");
+    
+    setTimeout(() => {
+        latInput.classList.remove("ring-2", "ring-green-500");
+        lngInput.classList.remove("ring-2", "ring-green-500");
+    }, 1000);
+}
+
+// Initialisation
+console.log("📄 Script chargé");
+
+// Attendre que tout soit chargé
+window.addEventListener('load', function() {
+    console.log("✅ Window loaded - démarrage dans 2 secondes");
+    
+    setTimeout(() => {
+        console.log("🚀🚀🚀 DÉMARRAGE DE LA RECHERCHE DE CARTE");
+        setupMapClickListener();
+    }, 2000);
 });
 
-</script>
+// Sauvegarde
+function savePatrimoine() {
+    const nom = document.getElementById("nom").value;
+    const lat = document.getElementById("latitude").value;
+    const lng = document.getElementById("longitude").value;
 
+    console.log("💾 Tentative de sauvegarde:", {nom, lat, lng});
+
+    if (!nom || nom.trim() === "") {
+        alert("⚠️ Veuillez entrer un nom pour le patrimoine");
+        return;
+    }
+    
+    if (!lat || !lng) {
+        alert("⚠️ Veuillez cliquer sur la carte pour définir la position");
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append("nom", nom);
+    formData.append("latitude", lat);
+    formData.append("longitude", lng);
+    formData.append("csrfmiddlewaretoken", "{{ csrf_token }}");
+
+    console.log("📤 Envoi des données au serveur...");
+
+    fetch("/add/", {
+        method: "POST",
+        body: formData
+    })
+    .then(response => {
+        console.log("📥 Réponse reçue:", response);
+        return response.json();
+    })
+    .then(data => {
+        console.log("📊 Données:", data);
+        
+        if (data.status === "success") {
+            alert("✅ Patrimoine ajouté avec succès !");
+            location.reload();
+        } else {
+            alert("❌ Erreur: " + (data.message || "Erreur inconnue"));
+        }
+    })
+    .catch(error => {
+        console.error("❌ Erreur:", error);
+        alert("❌ Erreur de connexion au serveur");
+    });
+}
+</script>
 
 </body>
 </html>

@@ -2,8 +2,7 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
-    path('dashboard/', views.dashboard, name='dashboard'),
-    path('delete/<int:id>/', views.delete_patrimoine, name='delete_patrimoine'),
-    path('update/<int:id>/', views.update_position, name='update_position'),
-    path('itineraire/', views.itineraire, name='itineraire'),
+    path('', views.dashboard, name='dashboard'),
+    path('add/', views.add_patrimoine, name='add_patrimoine'),
+    path('export-gpx/', views.export_gpx, name='export_gpx'),
 ]
