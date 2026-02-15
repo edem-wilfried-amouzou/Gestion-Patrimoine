@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-slate-100">
+
+<div class="flex h-screen">
+
+    <!-- SIDEBAR -->
+    <aside class="w-64 bg-slate-900 text-white p-6">
+
+        <h1 class="text-2xl font-bold mb-10">
+            Gestion Patrimoine
+        </h1>
+
+        <button onclick="openModal()"
+                class="w-full bg-blue-500 hover:bg-blue-600 p-2 rounded-lg mb-3">
+            ➕ Ajouter Patrimoine
+        </button>
+
+        <a href="/itineraire/"
+           class="block text-center bg-purple-500 hover:bg-purple-600 p-2 rounded-lg">
+            🧭 Voir Itinéraire
+        </a>
+
+        <p class="text-sm text-gray-400 mt-6">
+            Cliquez sur la carte
+        </p>
+
+    </aside>
+
+    <!-- MAIN -->
+    <main class="flex-1 p-6">
+
+        <div class="bg-white rounded-xl shadow p-4 mb-4">
+            Bienvenue {{ request.user.username }}
+        </div>
+
+        <div class="bg-white rounded-xl shadow p-4 h-[85%]">
+            {{ map|safe }}
+        </div>
+
+    </main>
+
+</div>
+
+<!-- MODAL -->
+<div id="modal"
+     class="hidden fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center">
+
+    <div class="bg-white p-6 rounded-xl w-96">
+
+        <h2 class="text-xl font-bold mb-4">Ajouter Patrimoine</h2>
+
+        <form method="post">
+            {% csrf_token %}
+
+            <input type="text" name="nom" placeholder="Nom"
+                   class="w-full border p-2 rounded mb-3">
+
+            <input type="hidden" name="latitude" id="latitude">
+            <input type="hidden" name="longitude" id="longitude">
+
+            <div class="flex justify-between">
+                <button type="button" onclick="closeModal()">
+                    Annuler
+                </button>
+
+                <button class="bg-slate-900 text-white px-4 py-2 rounded">
+                    Ajouter
+                </button>
+            </div>
+
+        </form>
+
+    </div>
+</div>
+
+<script>
+
+setTimeout(() => {
+
+    // 🔥 Récupérer EXACTEMENT la map Folium
+    const mapElement = document.querySelector('.folium-map');
+    const mapId = mapElement.id;
+
+    const map = window[mapId];
+
+    let tempMarker;
+
+    map.on('click', function(e) {
+
+        const lat = e.latlng.lat;
+        const lng = e.latlng.lng;
+
+        document.getElementById('latitude').value = lat;
+        document.getElementById('longitude').value = lng;
+
+        if (tempMarker) map.removeLayer(tempMarker);
+
+        tempMarker = L.marker([lat, lng], {
+            draggable: true
+        }).addTo(map);
+
+        tempMarker.on('dragend', function(event) {
+            const pos = event.target.getLatLng();
+            document.getElementById('latitude').value = pos.lat;
+            document.getElementById('longitude').value = pos.lng;
+        });
+
+        openModal();
+    });
+
+}, 800);  // 👈 délai un peu plus long = plus stable
+
+function deletePatrimoine(id) {
+    fetch(`/delete/${id}/`)
+        .then(() => location.reload());
+}
+
+function openModal() {
+    document.getElementById('modal').classList.remove('hidden');
+}
+
+function closeModal() {
+    document.getElementById('modal').classList.add('hidden');
+}
+
+
+
+map.eachLayer(function(layer) {
+
+    if (layer instanceof L.Marker && layer !== tempMarker) {
+
+        layer.dragging.enable();  // 😎 DRAG ACTIF
+
+        layer.on('dragend', function(event) {
+
+            const pos = event.target.getLatLng();
+
+            const id = layer._popup._content.match(/deletePatrimoine\((\d+)\)/)[1];
+
+            fetch(`/update/${id}/`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/x-www-form-urlencoded",
+                    "X-CSRFToken": document.querySelector('[name=csrfmiddlewaretoken]').value
+                },
+                body: `latitude=${pos.lat}&longitude=${pos.lng}`
+            });
+        });
+    }
+});
+
+</script>
+
+
+</body>
+</html>
