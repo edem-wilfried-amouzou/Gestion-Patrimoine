@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="nord">
+<head>
+    <meta charset="UTF-8">
+    <title>Sign in</title>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@5" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@5/themes.css" rel="stylesheet" type="text/css" />
+</head>
+<body>
+{% include "navbar.html" %}
+
+<div class="flex h-200 justify-center items-center">
+    <div>
+        {% if error %}
+            <div class="alert alert-error mb-4">
+                {{ error }}
+            </div>
+        {% endif %}
+
+        <form class="fieldset bg-base-200 border-base-300  rounded-box w-md border p-10" method="post">
+            {% csrf_token %}
+           <label class="fieldset text-lg">
+            <span class="label">Username</span>
+            <input type="text" class="input validator w-full" placeholder="Username" name="username" required />
+            <span class="validator-hint hidden">Required</span>
+          </label>
+
+          <label class="fieldset">
+            <span class="label text-lg">Password</span>
+            <input type="password" class="input validator  w-full" placeholder="Password" name="password" required />
+            <span class="validator-hint hidden">Required</span>
+          </label>
+
+          <button class="btn btn-neutral mt-4" type="submit">Login</button>
+          <button class="btn btn-ghost mt-1" type="reset">Reset</button>
+        </form>
+    </div>
+</div>
+</body>
+</html>
