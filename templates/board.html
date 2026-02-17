@@ -1,10 +1,552 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr" data-theme="light">
 <head>
     <meta charset="UTF-8">
-    <title>Title</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Gestion Patrimoine</title>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@5" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@5/themes.css" rel="stylesheet" type="text/css" />
 </head>
-<body>
+
+<body class="bg-slate-100">
+
+    <div class="flex h-screen">
+        <!-- SIDEBAR -->
+        <aside class="w-80 bg-slate-900 text-white p-6 overflow-y-auto">
+            <h1 class="text-2xl font-bold mb-10">Gestion Patrimoine</h1>
+
+            <button
+                onclick="startAdding()"
+                class="w-full bg-blue-500 hover:bg-blue-600 p-2 rounded-lg mb-4 text-white font-medium"
+            >
+                ➕ Ajouter Patrimoine
+            </button>
+
+            <button
+                onclick="toggleItineraryMode()"
+                class="w-full bg-purple-500 hover:bg-purple-600 p-2 rounded-lg mb-4 text-white font-medium"
+                id="itineraryBtn"
+            >
+                🗺️ Mode Itinéraire
+            </button>
+
+            <a
+                href="/export-gpx/"
+                class="block w-full bg-green-500 hover:bg-green-600 p-2 rounded-lg text-center text-white font-medium mb-4"
+            >
+                📥 Export GPX
+            </a>
+
+            <!-- FORMULAIRE AJOUT -->
+            <div id="formulaire" class="mt-6 hidden">
+                <div class="bg-yellow-500 text-black p-2 rounded mb-3 text-sm font-medium">
+                    👆 Cliquez sur la carte pour placer un marqueur
+                </div>
+
+                <input
+                    id="nom"
+                    type="text"
+                    placeholder="Nom du patrimoine"
+                    class="w-full p-2 rounded text-black mb-3"
+                />
+
+                <input
+                    id="latitude"
+                    type="text"
+                    placeholder="Latitude"
+                    class="w-full p-2 rounded text-black mb-3 bg-gray-100"
+                    readonly
+                />
+
+                <input
+                    id="longitude"
+                    type="text"
+                    placeholder="Longitude"
+                    class="w-full p-2 rounded text-black mb-3 bg-gray-100"
+                    readonly
+                />
+
+                <button
+                    onclick="savePatrimoine()"
+                    class="w-full bg-white text-slate-900 p-2 rounded hover:bg-gray-200 font-medium"
+                >
+                    ✅ Enregistrer
+                </button>
+            </div>
+
+            <!-- PANNEAU ITINÉRAIRE -->
+            <div id="itineraryPanel" class="mt-6 hidden">
+                <div class="bg-purple-600 p-3 rounded mb-3">
+                    <h3 class="font-bold mb-2">🗺️ Créer un itinéraire</h3>
+                    <p class="text-sm">Cochez les patrimoines dans l'ordre</p>
+                </div>
+
+                <!-- Choix du mode de transport -->
+                <div class="bg-slate-800 p-3 rounded mb-3">
+                    <label class="block text-sm font-medium mb-2">Mode de transport :</label>
+                    <select id="routingMode" class="w-full p-2 rounded text-black">
+                        <option value="driving">🚗 Voiture</option>
+                        <option value="cycling">🚴 Vélo</option>
+                        <option value="walking">🚶 À pied</option>
+                    </select>
+                </div>
+
+                <div id="itineraryList" class="space-y-2 mb-4"></div>
+
+                <button
+                    onclick="drawSelectedItinerary()"
+                    class="w-full bg-blue-500 hover:bg-blue-600 p-2 rounded mb-2"
+                >
+                    ✅ Tracer l'itinéraire
+                </button>
+
+                <button
+                    onclick="clearItinerary()"
+                    class="w-full bg-red-500 hover:bg-red-600 p-2 rounded mb-2"
+                >
+                    ❌ Effacer l'itinéraire
+                </button>
+
+                <!-- Infos itinéraire -->
+                <div id="itineraryInfo" class="bg-slate-800 p-3 rounded hidden">
+                    <div class="text-sm">
+                        <div class="mb-1">📏 Distance : <span id="routeDistance" class="font-bold"></span></div>
+                        <div>⏱️ Durée : <span id="routeDuration" class="font-bold"></span></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- LISTE DES PATRIMOINES -->
+            <div class="mt-6">
+                <h2 class="text-lg font-bold mb-3">Mes Patrimoines</h2>
+                <div id="patrimoinesList" class="space-y-2">
+                    {% for p in patrimoines %}
+                    <div class="bg-slate-800 p-3 rounded-lg">
+                        <div class="flex justify-between items-center">
+                            <span class="font-medium">{{ p.nom }}</span>
+                            <div class="flex gap-2">
+                                <button
+                                    onclick="editPatrimoine({{ p.id }}, '{{ p.nom|escapejs }}', {{ p.latitude }}, {{ p.longitude }})"
+                                    class="text-blue-400 hover:text-blue-300 text-sm"
+                                    title="Modifier"
+                                >
+                                    ✏️
+                                </button>
+                                <button
+                                    onclick="deletePatrimoine({{ p.id }})"
+                                    class="text-red-400 hover:text-red-300 text-sm"
+                                    title="Supprimer"
+                                >
+                                    🗑️
+                                </button>
+                            </div>
+                        </div>
+                        <div class="text-xs text-gray-400 mt-1">
+                            {{ p.latitude|floatformat:6 }}, {{ p.longitude|floatformat:6 }}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </aside>
+
+        <!-- MAIN CONTENT -->
+        <main class="flex-1 p-6">
+            <div class="bg-white rounded-xl shadow p-4 mb-4">
+                Bienvenue {{ request.user.username }}
+            </div>
+
+            <div class="bg-white rounded-xl shadow p-4 h-[85%]">
+                <div id="map" style="height: 100%; width: 100%;">
+                    {{ map|safe }}
+                </div>
+            </div>
+        </main>
+    </div>
+
+<script>
+let marker = null;
+let mapInstance = null;
+let editingPatrimoineId = null;
+let routePolyline = null;
+let itineraryMarkers = [];
+let itineraryMode = false;
+let selectedPatrimoines = [];
+
+const patrimoines = [
+    {% for p in patrimoines %}
+    {
+        id: {{ p.id }},
+        nom: "{{ p.nom|escapejs }}",
+        lat: {{ p.latitude }},
+        lng: {{ p.longitude }}
+    }{% if not forloop.last %},{% endif %}
+    {% endfor %}
+];
+
+function startAdding() {
+    if (itineraryMode) toggleItineraryMode();
+
+    editingPatrimoineId = null;
+    document.getElementById("nom").value = "";
+    document.getElementById("latitude").value = "";
+    document.getElementById("longitude").value = "";
+    document.getElementById("formulaire").classList.remove("hidden");
+
+    if (marker && mapInstance) {
+        mapInstance.removeLayer(marker);
+        marker = null;
+    }
+}
+
+function editPatrimoine(id, nom, lat, lng) {
+    if (itineraryMode) toggleItineraryMode();
+
+    editingPatrimoineId = id;
+    document.getElementById("nom").value = nom;
+    document.getElementById("latitude").value = lat.toFixed(6);
+    document.getElementById("longitude").value = lng.toFixed(6);
+    document.getElementById("formulaire").classList.remove("hidden");
+
+    if (marker && mapInstance) {
+        mapInstance.removeLayer(marker);
+    }
+
+    marker = L.marker([lat, lng], {
+        draggable: true,
+        title: "Glissez pour ajuster"
+    }).addTo(mapInstance);
+
+    mapInstance.setView([lat, lng], 15);
+
+    marker.on("dragend", function() {
+        const position = marker.getLatLng();
+        document.getElementById("latitude").value = position.lat.toFixed(6);
+        document.getElementById("longitude").value = position.lng.toFixed(6);
+    });
+}
+
+function deletePatrimoine(id) {
+    if (!confirm("⚠️ Supprimer ce patrimoine ?")) return;
+
+    fetch("/delete/" + id + "/", {
+        method: "POST",
+        headers: { "X-CSRFToken": "{{ csrf_token }}" }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === "success") {
+            alert("✅ Patrimoine supprimé !");
+            location.reload();
+        } else {
+            alert("❌ Erreur");
+        }
+    });
+}
+
+function toggleItineraryMode() {
+    itineraryMode = !itineraryMode;
+
+    if (itineraryMode) {
+        document.getElementById("formulaire").classList.add("hidden");
+        document.getElementById("itineraryPanel").classList.remove("hidden");
+        document.getElementById("itineraryBtn").textContent = "❌ Quitter Mode Itinéraire";
+        document.getElementById("itineraryBtn").classList.remove("bg-purple-500", "hover:bg-purple-600");
+        document.getElementById("itineraryBtn").classList.add("bg-red-500", "hover:bg-red-600");
+
+        populateItineraryList();
+
+        if (marker) {
+            mapInstance.removeLayer(marker);
+            marker = null;
+        }
+    } else {
+        document.getElementById("itineraryPanel").classList.add("hidden");
+        document.getElementById("itineraryBtn").textContent = "🗺️ Mode Itinéraire";
+        document.getElementById("itineraryBtn").classList.remove("bg-red-500", "hover:bg-red-600");
+        document.getElementById("itineraryBtn").classList.add("bg-purple-500", "hover:bg-purple-600");
+
+        clearItinerary();
+        selectedPatrimoines = [];
+    }
+}
+
+function populateItineraryList() {
+    const list = document.getElementById("itineraryList");
+    list.innerHTML = "";
+
+    if (patrimoines.length === 0) {
+        list.innerHTML = '<p class="text-sm text-gray-400">Aucun patrimoine</p>';
+        return;
+    }
+
+    patrimoines.forEach(p => {
+        const div = document.createElement("div");
+        div.className = "bg-slate-800 p-2 rounded flex items-center gap-2 cursor-pointer hover:bg-slate-700";
+        div.innerHTML = `
+            <input
+                type="checkbox"
+                id="itinerary_${p.id}"
+                value="${p.id}"
+                class="w-4 h-4"
+                onchange="togglePatrimoineSelection(${p.id})"
+            />
+            <label for="itinerary_${p.id}" class="flex-1 cursor-pointer text-sm">
+                ${p.nom}
+            </label>
+            <span class="text-xs text-gray-400 order-badge" id="order_${p.id}"></span>
+        `;
+        list.appendChild(div);
+    });
+}
+
+function togglePatrimoineSelection(patrimoineId) {
+    const checkbox = document.getElementById(`itinerary_${patrimoineId}`);
+    const orderBadge = document.getElementById(`order_${patrimoineId}`);
+
+    if (checkbox.checked) {
+        selectedPatrimoines.push(patrimoineId);
+        orderBadge.textContent = `#${selectedPatrimoines.length}`;
+        orderBadge.classList.add("bg-blue-500", "px-2", "py-1", "rounded");
+    } else {
+        const index = selectedPatrimoines.indexOf(patrimoineId);
+        if (index > -1) {
+            selectedPatrimoines.splice(index, 1);
+        }
+        orderBadge.textContent = "";
+        orderBadge.classList.remove("bg-blue-500", "px-2", "py-1", "rounded");
+        updateOrderBadges();
+    }
+}
+
+function updateOrderBadges() {
+    selectedPatrimoines.forEach((id, index) => {
+        const badge = document.getElementById(`order_${id}`);
+        badge.textContent = `#${index + 1}`;
+    });
+}
+
+async function drawSelectedItinerary() {
+    if (selectedPatrimoines.length < 2) {
+        alert("⚠️ Sélectionnez au moins 2 patrimoines !");
+        return;
+    }
+
+    clearItinerary();
+
+    // Créer les coordonnées
+    const coordinates = selectedPatrimoines.map(id => {
+        const p = patrimoines.find(pat => pat.id === id);
+        return [p.lng, p.lat]; // OSRM utilise [lng, lat]
+    });
+
+    // Mode de transport
+    const mode = document.getElementById("routingMode").value;
+
+    // Construire l'URL OSRM
+    const coordsString = coordinates.map(c => `${c[0]},${c[1]}`).join(';');
+    const osrmUrl = `https://router.project-osrm.org/route/v1/${mode}/${coordsString}?overview=full&geometries=geojson`;
+
+    try {
+        const response = await fetch(osrmUrl);
+        const data = await response.json();
+
+        if (data.code !== 'Ok') {
+            alert("❌ Impossible de calculer l'itinéraire");
+            return;
+        }
+
+        const route = data.routes[0];
+        const routeCoords = route.geometry.coordinates.map(c => [c[1], c[0]]); // Convertir en [lat, lng]
+
+        // Tracer la route
+        routePolyline = L.polyline(routeCoords, {
+            color: '#8b5cf6',
+            weight: 5,
+            opacity: 0.8
+        }).addTo(mapInstance);
+
+        // Ajouter les marqueurs numérotés
+        selectedPatrimoines.forEach((id, index) => {
+            const p = patrimoines.find(pat => pat.id === id);
+
+            const numberMarker = L.marker([p.lat, p.lng], {
+                icon: L.divIcon({
+                    className: 'number-icon',
+                    html: `<div style="background: linear-gradient(135deg, #8b5cf6, #6366f1); color: white; width: 35px; height: 35px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; border: 3px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.3); font-size: 14px;">${index + 1}</div>`,
+                    iconSize: [35, 35]
+                })
+            });
+
+            numberMarker.addTo(mapInstance);
+            numberMarker.bindPopup(`<b>#${index + 1} - ${p.nom}</b>`);
+            itineraryMarkers.push(numberMarker);
+        });
+
+        // Calculer distance et durée
+        const distanceKm = (route.distance / 1000).toFixed(2);
+        const durationMin = Math.round(route.duration / 60);
+        const hours = Math.floor(durationMin / 60);
+        const minutes = durationMin % 60;
+
+        let durationText = hours > 0 ? `${hours}h ${minutes}min` : `${minutes}min`;
+
+        document.getElementById("routeDistance").textContent = `${distanceKm} km`;
+        document.getElementById("routeDuration").textContent = durationText;
+        document.getElementById("itineraryInfo").classList.remove("hidden");
+
+        // Ajuster la vue
+        mapInstance.fitBounds(routePolyline.getBounds(), { padding: [50, 50] });
+
+        alert(`✅ Itinéraire tracé !\n📏 Distance : ${distanceKm} km\n⏱️ Durée : ${durationText}`);
+
+    } catch (error) {
+        console.error("Erreur:", error);
+        alert("❌ Erreur lors du calcul de l'itinéraire");
+    }
+}
+
+function clearItinerary() {
+    if (routePolyline) {
+        mapInstance.removeLayer(routePolyline);
+        routePolyline = null;
+    }
+
+    itineraryMarkers.forEach(m => mapInstance.removeLayer(m));
+    itineraryMarkers = [];
+
+    document.getElementById("itineraryInfo").classList.add("hidden");
+}
+
+function findLeafletMap() {
+    const iframes = document.querySelectorAll('iframe');
+
+    for (let iframe of iframes) {
+        try {
+            const iframeWindow = iframe.contentWindow;
+            const iframeL = iframeWindow.L;
+
+            if (iframeL) {
+                for (let key in iframeWindow) {
+                    try {
+                        if (iframeWindow[key] instanceof iframeL.Map) {
+                            window.L = iframeL;
+                            return iframeWindow[key];
+                        }
+                    } catch(e) {}
+                }
+            }
+        } catch(e) {}
+    }
+
+    if (typeof L !== 'undefined' && L.Map) {
+        for (let key in window) {
+            try {
+                if (window[key] instanceof L.Map) {
+                    return window[key];
+                }
+            } catch(e) {}
+        }
+    }
+
+    return null;
+}
+
+function setupMapClickListener() {
+    mapInstance = findLeafletMap();
+
+    if (!mapInstance) {
+        setTimeout(setupMapClickListener, 300);
+        return;
+    }
+
+    mapInstance.on("click", handleMapClick);
+
+    if (mapInstance._container) {
+        mapInstance._container.style.cursor = "crosshair";
+    }
+}
+
+function handleMapClick(e) {
+    if (itineraryMode) return;
+
+    const lat = e.latlng.lat.toFixed(6);
+    const lng = e.latlng.lng.toFixed(6);
+
+    document.getElementById("latitude").value = lat;
+    document.getElementById("longitude").value = lng;
+    document.getElementById("formulaire").classList.remove("hidden");
+
+    if (marker) {
+        marker.setLatLng(e.latlng);
+    } else {
+        marker = L.marker(e.latlng, {
+            draggable: true,
+            title: "Glissez pour ajuster"
+        }).addTo(mapInstance);
+
+        marker.on("dragend", function() {
+            const position = marker.getLatLng();
+            document.getElementById("latitude").value = position.lat.toFixed(6);
+            document.getElementById("longitude").value = position.lng.toFixed(6);
+        });
+    }
+
+    const latInput = document.getElementById("latitude");
+    const lngInput = document.getElementById("longitude");
+
+    latInput.classList.add("ring-2", "ring-green-500");
+    lngInput.classList.add("ring-2", "ring-green-500");
+
+    setTimeout(() => {
+        latInput.classList.remove("ring-2", "ring-green-500");
+        lngInput.classList.remove("ring-2", "ring-green-500");
+    }, 1000);
+}
+
+window.addEventListener('load', function() {
+    setTimeout(setupMapClickListener, 2000);
+});
+
+function savePatrimoine() {
+    const nom = document.getElementById("nom").value;
+    const lat = document.getElementById("latitude").value;
+    const lng = document.getElementById("longitude").value;
+
+    if (!nom || nom.trim() === "") {
+        alert("⚠️ Veuillez entrer un nom");
+        return;
+    }
+
+    if (!lat || !lng) {
+        alert("⚠️ Veuillez définir la position");
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append("nom", nom);
+    formData.append("latitude", lat);
+    formData.append("longitude", lng);
+    formData.append("csrfmiddlewaretoken", "{{ csrf_token }}");
+
+    const url = editingPatrimoineId ? `/edit/${editingPatrimoineId}/` : "/add/";
+
+    fetch(url, {
+        method: "POST",
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === "success") {
+            alert("✅ " + (editingPatrimoineId ? "Modifié" : "Ajouté") + " !");
+            location.reload();
+        } else {
+            alert("❌ Erreur");
+        }
+    });
+}
+</script>
 
 </body>
 </html>

@@ -15,7 +15,8 @@ from decouple import config
 from datetime import timedelta
 
 SIMPLE_JWT = {
-    "ACCES_TOKEN_LIFETIME": timedelta(minutes=1),
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=10),
+    # "ACCESS_TOKEN_LIFETIME": timedelta(seconds=30),
 }
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -155,3 +156,4 @@ USE_TZ = True
 STATIC_URL = 'static/'
 
 APPEND_SLASH=True
+LOGIN_URL = "sign_in"

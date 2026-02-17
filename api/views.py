@@ -30,11 +30,11 @@ class LoginAPI(APIView):
     def post(self, request):
         username = request.data.get("username")
         pw = request.data.get("password")
-        print("DATA RECEIVED:", request.data)
+        # print("DATA RECEIVED:", request.data)
 
         user = authenticate(request, username=username, password=pw)
         if user is not None:
-            login(request, user)
+            # login(request, user)
             access = AccessToken.for_user(user)
             return Response({
                 "message":"User logged in successfully",
