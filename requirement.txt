@@ -1,6 +1,7 @@
 asgiref==3.11.1
-Django==6.0.2
+Django==5.0.2
 mysql-connector-python==9.6.0
 python-decouple==3.8
 sqlparse==0.5.5
 tzdata==2025.3
+folium==0.20.0

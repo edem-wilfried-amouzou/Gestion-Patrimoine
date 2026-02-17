@@ -1,0 +1,104 @@
+{% load widget_tweaks %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ajouter un patrimoine</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+</head>
+<body class="bg-gray-950 text-gray-200 h-screen overflow-hidden">
+
+<div class="flex h-full p-6 gap-6">
+
+
+    <div class="flex-[7] bg-gray-900 rounded-2xl shadow-2xl p-4 flex flex-col h-full">
+
+        <h2 class="text-xl font-semibold text-white mb-4">
+            🗺 Carte
+        </h2>
+
+        <div id="map" class="flex-1 min-h-[500px] rounded-xl"></div>
+
+    </div>
+
+
+    <div class="flex-[3] bg-gray-900 rounded-2xl shadow-2xl p-6 overflow-y-auto">
+
+        <h2 class="text-xl font-semibold text-white mb-6">
+            ➕ Ajouter un patrimoine
+        </h2>
+
+        <form method="post" class="space-y-5">
+            {% csrf_token %}
+
+            {% for field in form %}
+                <div>
+                    <label class="block mb-2 text-sm font-medium text-gray-300">
+                        {{ field.label }}
+                    </label>
+
+                    {{ field|add_class:"w-full bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" }}
+
+                    {% if field.errors %}
+                        <p class="text-red-500 text-sm mt-1">
+                            {{ field.errors }}
+                        </p>
+                    {% endif %}
+                </div>
+            {% endfor %}
+
+            <button type="submit"
+                class="w-full bg-blue-600 hover:bg-blue-700 active:scale-95 transition-all duration-200 text-white py-2 rounded-lg font-semibold shadow-lg">
+                Enregistrer
+            </button>
+
+        </form>
+
+    </div>
+
+</div>
+
+
+
+<script>
+var map = L.map('map').setView([6.1319, 1.2228], 13);
+
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: "© OpenStreetMap"
+}).addTo(map);
+
+var marker;
+
+map.on('click', function(e) {
+    var lat = e.latlng.lat;
+    var lng = e.latlng.lng;
+
+    if (marker) {
+        map.removeLayer(marker);
+    }
+
+    marker = L.marker([lat, lng], {
+        draggable: true   // 👈 ICI
+    }).addTo(map)
+      .bindPopup("Patrimoine ici 📍")
+      .openPopup();
+
+
+    marker.on('dragend', function(e) {
+        var position = marker.getLatLng();
+        document.getElementById("id_latitude").value = position.lat.toFixed(6);
+        document.getElementById("id_longitude").value = position.lng.toFixed(6);
+    });
+
+
+    document.getElementById("id_latitude").value = lat.toFixed(6);
+    document.getElementById("id_longitude").value = lng.toFixed(6);
+});
+
+</script>
+
+</body>
+</html>
