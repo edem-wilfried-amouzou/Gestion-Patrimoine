@@ -72,6 +72,34 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 
 var marker;
 
+var Ville = {
+    "Lome": [6.1725, 1.2314],
+    "Sokode": [8.9833, 1.1333],
+    "Kara": [9.5511, 1.1860],
+    "Atakpame": [7.5333, 1.1333],
+    "Kpalime": [6.9000, 0.6333],
+    "Aneho": [6.2333, 1.6000],
+    "Tsevie": [6.4333, 1.2167],
+    "Dapaong": [10.8620, 0.2070],
+    "Bassar": [9.2500, 0.7833],
+    "Niamtougou": [9.7670, 1.1050],
+    "Notse": [6.9500, 1.1667],
+    "Badou": [7.5833, 0.6000]
+}
+
+
+document.getElementById("id_ville").addEventListener("change",function(){
+
+    var ville_choisie = this.value
+    if(ville_choisie in ville){
+        var coords = ville[ville_choisie]
+        map.setView(coords,13)
+        L.marker(coords).addTo(map)
+        .bindPopup("📍 Ville sélectionnée : " + ville_choisie)
+        .openPopup();
+    }
+})
+
 map.on('click', function(e) {
     var lat = e.latlng.lat;
     var lng = e.latlng.lng;
@@ -81,9 +109,9 @@ map.on('click', function(e) {
     }
 
     marker = L.marker([lat, lng], {
-        draggable: true   // 👈 ICI
+        draggable: true 
     }).addTo(map)
-      .bindPopup("Patrimoine ici 📍")
+      .bindPopup("Patrimoine ici 🏠")
       .openPopup();
 
 
