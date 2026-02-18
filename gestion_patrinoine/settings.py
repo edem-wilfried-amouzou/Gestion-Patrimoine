@@ -12,6 +12,12 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 
 from pathlib import Path
 from decouple import config
+from datetime import timedelta
+
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=10),
+    # "ACCESS_TOKEN_LIFETIME": timedelta(seconds=30),
+}
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -39,8 +45,16 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+<<<<<<< HEAD
     'widget_tweaks',
     'geo',
+=======
+    'rest_framework',
+    'rest_framework_simplejwt',
+
+    'gest_Pat_App',
+    'api',
+>>>>>>> origin
 ]
 
 MIDDLEWARE = [
@@ -51,6 +65,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+
+    'gest_Pat_App.middleware.TokenVerificationMiddleware'
 ]
 
 ROOT_URLCONF = 'gestion_patrinoine.urls'
@@ -58,7 +74,7 @@ ROOT_URLCONF = 'gestion_patrinoine.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -144,3 +160,6 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+
+APPEND_SLASH=True
+LOGIN_URL = "sign_in"
