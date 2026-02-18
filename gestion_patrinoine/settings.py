@@ -45,16 +45,11 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-<<<<<<< HEAD
-    'widget_tweaks',
-    'geo',
-=======
     'rest_framework',
     'rest_framework_simplejwt',
-
     'gest_Pat_App',
     'api',
->>>>>>> origin
+    'widget_tweaks',
 ]
 
 MIDDLEWARE = [
