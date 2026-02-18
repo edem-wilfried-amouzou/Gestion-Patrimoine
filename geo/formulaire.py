@@ -1,7 +1,7 @@
 from django import forms
 from .models import patrimoine
 
-Ville = [
+Villes = [
     ("Lome", "Lomé"),
     ("Kara", "Kara"),
     ("Sokode", "Sokodé"),
@@ -16,11 +16,11 @@ Ville = [
 ]
 
 class patrimoineForm(forms.ModelForm):
-    ville = forms.ChoiceField(choices=Ville,required=False,label="ville")
+    ville = forms.ChoiceField(choices=Villes,required=False,label="ville")
 
     class Meta:
         model = patrimoine
-        fields = ['Ville','nom','latitude', 'longitude']
+        fields = ['ville','nom','latitude', 'longitude']
         widgets = {
             'nom': forms.TextInput(attrs={'class': 'form-control'}),
             'latitude': forms.NumberInput(attrs={'class': 'form-control'}),

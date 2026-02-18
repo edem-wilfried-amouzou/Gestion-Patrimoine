@@ -5,6 +5,7 @@ from django.contrib.auth.models import User
 
 class patrimoine(models.Model):
     nom = models.CharField(max_length=200)
+    ville = models.CharField(max_length=100)
     latitude = models.FloatField()
     longitude = models.FloatField()
     utilisateur = models.ForeignKey(User, on_delete=models.CASCADE)

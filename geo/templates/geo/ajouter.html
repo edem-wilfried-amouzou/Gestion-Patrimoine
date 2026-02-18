@@ -91,8 +91,8 @@ var Ville = {
 document.getElementById("id_ville").addEventListener("change",function(){
 
     var ville_choisie = this.value
-    if(ville_choisie in ville){
-        var coords = ville[ville_choisie]
+    if(ville_choisie in Ville){
+        var coords = Ville[ville_choisie]
         map.setView(coords,13)
         L.marker(coords).addTo(map)
         .bindPopup("📍 Ville sélectionnée : " + ville_choisie)
