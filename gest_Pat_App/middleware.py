@@ -44,7 +44,16 @@ from django.contrib.auth import logout
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import AccessToken
 
-PUBLIC_PATHS = ["/home/", "/api/", "/sign_in/", "/sign_up/", "/admin/"]
+PUBLIC_PATHS = [
+    "/",
+    "/home/",
+    "/api/",
+    "/sign_in/",
+    "/sign_up/",
+    "/admin/",
+    "/auth/google/login/",
+    "/auth/google/callback/",
+]
 
 class TokenVerificationMiddleware:
 
@@ -53,20 +62,19 @@ class TokenVerificationMiddleware:
 
     def __call__(self, request):
 
-        # Autoriser routes publiques
-        for prefix in PUBLIC_PATHS:
-            if request.path.startswith(prefix):
-                return self.get_response(request)
+        # 1️⃣ Autoriser routes publiques
+        if any(request.path.startswith(path) for path in PUBLIC_PATHS):
+            return self.get_response(request)
 
+        # 2️⃣ Vérifier token session
         token = request.session.get("access_token")
 
-        #redirection si il n'y a pas de token
         if not token:
             logout(request)
             request.session.flush()
             return redirect("sign_in")
 
-        # Vérification expiration JWT
+        # 3️⃣ Vérifier validité JWT
         try:
             AccessToken(token)
         except TokenError:
