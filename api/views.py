@@ -41,6 +41,16 @@ class LoginAPI(APIView):
                 "access_token": str(access)
             }, status=status.HTTP_200_OK)
         else:
+            try:
+                user_t = User.objects.get(username=username)
+            except User.DoesNotExist:
+                user_t = None
+
+            if user_t == None:
+                return Response({
+                    "error":"Invalid username"
+                }, status=status.HTTP_400_BAD_REQUEST)
+
             return Response({
-                "error":"Invalid username or password"
-            }, status=status.HTTP_400_BAD_REQUEST)
+                "error": "Invalid password"
+            }, status=status.HTTP_401_UNAUTHORIZED)

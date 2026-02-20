@@ -7,6 +7,8 @@ class Patrimoine(models.Model):
     latitude = models.FloatField()
     longitude = models.FloatField()
     ville = models.CharField(max_length=100)
+    photo = models.ImageField(upload_to='', null=True, blank=True)
+    description = models.TextField(null=True, blank=True)
     date_creation = models.DateTimeField(auto_now_add=True)
     date_update = models.DateTimeField(auto_now=True)
 
@@ -18,17 +20,10 @@ class Patrimoine(models.Model):
     def __str__(self):
         return self.nom
 
-    '''
-    - l'ecran d'aceuil (nella)
-    - le login (paul) 
-    - le sign up (obed)
-    - la de lutilisateur avec la carte portant les patrimoines (peniel)
-    - la page d'ajoute ( alexis)
-    - api token
-    - api connexion
-    
-    '''
 
-'''
-- IL I
-'''
+class SignInAttempt(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    attempt = models.IntegerField(default=0)
+
+    def __str__(self):
+        return f"{self.user.username} - {self.attempt} attempts"

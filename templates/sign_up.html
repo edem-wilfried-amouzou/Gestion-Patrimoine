@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="synthwave">
 <head>
     <meta charset="UTF-8">
     <link href="https://cdn.jsdelivr.net/npm/daisyui@5" rel="stylesheet" type="text/css" />
@@ -8,7 +8,6 @@
     <title>Sign Up</title>
 </head>
 <body>
-    {% include "navbar.html" %}
 
     <div class="flex h-200 justify-center items-center">
         <div>
@@ -18,34 +17,35 @@
                 </div>
             {% endif %}
 
-            <form class="fieldset bg-base-200 border-base-300  rounded-box w-md border p-10" method="post">
+            <form class="fieldset bg-base-200 border-base-300  rounded-box w-lg border p-10" method="post">
                 {% csrf_token %}
-               <label class="fieldset text-lg">
-                <span class="label">Username</span>
-                <input type="text" class="input validator w-full" placeholder="Username" name="username" required />
+                <div class="text-2xl flex justify-center font-bold mb-6">S'inscrire</div>
+               <label class="fieldset mb-4 text-lg">
+                <span class="label">Nom d'utilisateur</span>
+                <input type="text" class="input validator w-full" placeholder="Nom d'utilisateur" name="username" required />
                 <span class="validator-hint hidden">Required</span>
               </label>
 
-                <label class="fieldset text-lg">
+                <label class="fieldset mb-4 text-lg">
                 <span class="label">Email</span>
-                <input type="email" class="input validator w-full" placeholder="Your Email" name="email" required />
+                <input type="email" class="input validator w-full" placeholder="Votre Email" name="email" required />
                 <span class="validator-hint hidden">Required</span>
               </label>
 
-              <label class="fieldset">
-                <span class="label text-lg">Password</span>
-                <input type="password" class="input validator  w-full" placeholder="Password" name="pw" required />
+              <label class="fieldset mb-4 text-lg">
+                <span class="label">Mot de passe</span>
+                <input type="password" class="input validator  w-full" placeholder="Mot de passe" name="pw" required />
                 <span class="validator-hint hidden">Required</span>
               </label>
 
-                <label class="fieldset text-lg">
-                <span class="label">Confirm Password </span>
-                <input type="password" class="input validator w-full" placeholder="Confirm The Password" name="re-pw" required />
+                <label class="fieldset mb-4 text-lg">
+                <span class="label">Confirmer le mot de passe</span>
+                <input type="password" class="input validator w-full" placeholder="Confirmer le mot de passe" name="re-pw" required />
                 <span class="validator-hint hidden">Required</span>
               </label>
 
-              <button class="btn btn-neutral mt-4" type="submit">Login</button>
-              <button class="btn btn-ghost mt-1" type="reset">Reset</button>
+              <button class="btn btn-neutral mt-4" type="submit">S'inscrire</button>
+              <button class="btn btn-active mt-1" type="reset">Effacer</button>
             </form>
         </div>
     </div>

@@ -1,10 +1,139 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <title>Title</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Gestion Patrimoine</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  {% load static %}
+  <link rel="stylesheet" href="{% static 'css/home.css' %}" />
 </head>
 <body>
+
+  <div class="global-overlay"></div>
+
+  <nav>
+    <div class="container nav-inner">
+      <a href="#" class="logo">Gestion Patrimoine</a>
+      <ul class="nav-links">
+        <li><a href="#fonctionnalites">Fonctionnalités</a></li>
+        {% comment %} <li><a href="#carte">Carte</a></li> {% endcomment %}
+        <li><a href="#comment">Comment ça marche</a></li>
+        {% comment %} <li><a href="#patrimoines">Actifs</a></li> {% endcomment %}
+        <li><a href="#commencer">Commencer</a></li>
+      </ul>
+      <div class="buttons-container ">
+      <a href="{% url 'sign_in' %}" class="btn primary">Se connecter</a>
+      <a href="{% url 'sign_up' %}" class="btn secondary">S'inscrire</a>
+      </div>
+      <div class="hamburger" onclick="document.querySelector('.nav-links').classList.toggle('active')">
+        <span></span><span></span><span></span>
+      </div>
+    </div>
+  </nav>
+
+  <header>
+    <div class="container">
+      <h2 style="font-size:70px; color: #ffffff; ">Inventoriez et gérez</h2>
+      <h2 style="color: #00b8ff; margin-top: -4.5rem; font-size:70px">les actifs de votre entreprise</h2>
+      <p>Une plateforme sécurisée pour répertorier, localiser et gérer les terrains, bâtiments et autres actifs avec leurs coordonnées GPS.</p>
+
+      <div class="buttons-container">
+        <a href="{% url 'sign_in' %}" class="btn primary">Commencer maintenant </a>
+        {% comment %} <a href="#ajouter" class="btn secondary">Ajouter un actif</a> {% endcomment %}
+      </div>
+    </div>
+  </header>
+
+  <section id="fonctionnalites">
+    <div class="container">
+      <h2>Fonctionnalités clés</h2>
+      <div class="grid">
+        <div class="card">
+          <div class="emoji">📍</div>
+          <h3>Géolocalisation intelligente</h3>
+          <p class="desc">Localisez précisément chaque actif (terrains, bâtiments) grâce au GPS et à l'importation de fichiers GPX.</p>
+        </div>
+        <div class="card">
+          <div class="emoji">🏢</div>
+          <h3>Base de données d'actifs d'entreprise</h3>
+          <p class="desc">Contribuez à une base de données sécurisée et collaborative pour les employés autorisés.</p>
+        </div>
+        <div class="card">
+          <div class="emoji">🔒</div>
+          <h3>Connexion sécurisée</h3>
+          <p class="desc">Accédez à l'application via une connexion chiffrée et protégez vos données d'entreprise.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+
+  <section id="comment">
+  <div class="container">
+    <h2>Comment ça marche ?</h2>
+
+    <div class="how-it-works-steps">
+      <div class="step-item">
+        <div class="step-circle">1</div>
+        <p>Sélectionnez une ville ou un lieu</p>
+      </div>
+      <div class="step-item">
+        <div class="step-circle">2</div>
+        <p>Cliquez sur la carte ou importez un fichier GPX</p>
+      </div>
+      <div class="step-item">
+        <div class="step-circle">3</div>
+        <p>Enregistrez et partagez votre patrimoine</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+  <section id="patrimoines">
+    <div class="container">
+      <h2>Actifs enregistrés</h2>
+      <div class="grid">
+        <div class="card">
+          <div class="emoji">🏢</div>
+          <h3>Bâtiment administratif à Lomé</h3>
+          <p class="desc">Togo</p>
+        </div>
+        <div class="card">
+          <div class="emoji">🏭</div>
+          <h3>Usine à Sokodé</h3>
+          <p class="desc">Togo</p>
+        </div>
+        <div class="card">
+          <div class="emoji">⛰️</div>
+          <h3>Terrain industriel près du Mont Agou</h3>
+          <p class="desc">Togo</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="cta" id="commencer">
+    <div class="container">
+      <h2>Participez à l'inventaire et à la gestion des actifs de votre entreprise.</h2>
+      <a href="#" class="cta-btn">Commencer maintenant</a>
+    </div>
+  </section>
+
+  <footer>
+    <div class="container">
+      <div class="footer-links">
+        <a href="#">À propos</a>
+        <a href="#">Contact</a>
+        <a href="#">Confidentialité</a>
+        <a href="#">Conditions d'utilisation</a>
+      </div>
+      <p>© 2025–2026 Gestion Patrimoine Entreprise – Tous droits réservés</p>
+    </div>
+  </footer>
 
 </body>
 </html>

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="nord">
+<html lang="en" data-theme="synthwave">
 <head>
     <meta charset="UTF-8">
     <title>Sign in</title>
@@ -8,32 +8,37 @@
     <link href="https://cdn.jsdelivr.net/npm/daisyui@5/themes.css" rel="stylesheet" type="text/css" />
 </head>
 <body>
-{% include "navbar.html" %}
 
 <div class="flex h-200 justify-center items-center">
     <div>
+
         {% if error %}
             <div class="alert alert-error mb-4">
                 {{ error }}
             </div>
         {% endif %}
 
-        <form class="fieldset bg-base-200 border-base-300  rounded-box w-md border p-10" method="post" action="{% url 'sign_in' %}">
+        <form class="fieldset bg-base-200 border-base-300  rounded-box w-lg h-auto shadow-xl border p-10" method="post" action="{% url 'sign_in' %}">
             {% csrf_token %}
+            <div class="text-2xl flex justify-center font-bold mb-6">Se connecter</div>   
            <label class="fieldset text-lg">
-            <span class="label">Username</span>
+            <span class="label">Nom d'utilisateur</span>
             <input type="text" class="input validator w-full" placeholder="Username" name="username" required />
             <span class="validator-hint hidden">Required</span>
           </label>
 
-          <label class="fieldset">
-            <span class="label text-lg">Password</span>
+          <label class="fieldset mt-4 text-lg">
+            <span class="label text-lg">Mot de passe</span>
             <input type="password" class="input validator  w-full" placeholder="Password" name="password" required />
             <span class="validator-hint hidden">Required</span>
           </label>
 
-          <button class="btn btn-neutral mt-4" type="submit">Login</button>
-          <button class="btn btn-ghost mt-1" type="reset">Reset</button>
+        <p class="mt-2">Mot de passe oublié ? <a href="#" class="link link-primary">Cliquez ici</a></p>
+            <div class="divider"></div>
+
+          <button class="btn btn-neutral mt-8" type="submit">Se connecter</button>
+          <button class="btn btn-active mt-1" type="reset">Réinitialiser</button>
+          <a href="{% url 'sign_up' %}" class="btn btn-link mt-4">Pas de compte ? S'inscrire</a>
         </form>
     </div>
 </div>

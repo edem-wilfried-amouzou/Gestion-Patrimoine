@@ -45,7 +45,6 @@ from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import AccessToken
 
 PUBLIC_PATHS = [
-    "/",
     "/home/",
     "/api/",
     "/sign_in/",
@@ -65,6 +64,10 @@ class TokenVerificationMiddleware:
         # 1️⃣ Autoriser routes publiques
         if any(request.path.startswith(path) for path in PUBLIC_PATHS):
             return self.get_response(request)
+
+        if request.path == "/":
+            return self.get_response(request)
+
 
         # 2️⃣ Vérifier token session
         token = request.session.get("access_token")
