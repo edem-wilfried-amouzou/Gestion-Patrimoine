@@ -10,5 +10,6 @@ urlpatterns = [
     path('export-gpx/', views.export_gpx, name='export_gpx'),
     path('export-pdf/', views.export_pdf, name='export_pdf'),
     path('itinerary-to/', views.itinerary_to_patrimoine, name='itinerary_to'),
+    path('itinerary-multi/', views.itinerary_multi, name='itinerary_multi'),
     path('api/patrimoines/', views.get_patrimoines_json, name='api_patrimoines'),
 ]

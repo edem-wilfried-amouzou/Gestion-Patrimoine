@@ -6,12 +6,13 @@
     <title>Gestion Patrimoine</title>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
     {% load static %}
     <link rel="stylesheet" href="{% static 'patrimoine/css/style.css' %}">
 </head>
 <body>
 
-<!-- NAVBAR -->
 <!-- NAVBAR -->
 <nav class="navbar">
     <div class="navbar-brand">
@@ -31,16 +32,12 @@
         <button class="btn-nav btn-nav--primary" onclick="window.appHandlers.handleAddMode()">
             <i class="fas fa-plus"></i><span>Ajouter</span>
         </button>
-        
-        <!-- BOUTON DE DÉCONNEXION AJOUTÉ ICI -->
         <form id="logout-form" method="post" action="{% url 'logout' %}" style="display: inline;">
-    {% csrf_token %}
-    <button type="submit" class="btn-nav btn-nav--danger" title="Déconnexion">
-        <i class="fas fa-power-off"></i><span>Déconnexion</span>
-    </button>
-</form>
-</button>
-        
+            {% csrf_token %}
+            <button type="submit" class="btn-nav btn-nav--danger" title="Déconnexion">
+                <i class="fas fa-power-off"></i><span>Déconnexion</span>
+            </button>
+        </form>
         <div class="user-menu">
             <button class="user-btn"><i class="fas fa-user"></i></button>
             <div class="user-dropdown">
@@ -88,9 +85,9 @@
     <span id="modeText">Mode actif</span>
 </div>
 
-<!-- CARTE PRINCIPALE -->
+<!-- CARTE PRINCIPALE - div simple, Leaflet s'en charge -->
 <main class="map-wrapper">
-    <div id="map" class="map-container">{{ map|safe }}</div>
+    <div id="map" class="map-container"></div>
 </main>
 
 <!-- FOOTER -->
@@ -292,10 +289,17 @@
 
 {% csrf_token %}
 <script>
-    window.patrimoinesData = {{ patrimoines_json|safe }};
+    window.patrimoinesData      = {{ patrimoines_json|safe }};
     window.othersPatrimoinesData = {{ others_patrimoines_json|default:"[]"|safe }};
-    window.currentUserId = {{ request.user.id }};
+    window.currentUserId        = {{ request.user.id }};
+    window.mapCenterLat         = {{ center_lat }};
+    window.mapCenterLng         = {{ center_lng }};
 </script>
+<!-- Leaflet JS chargé directement dans la page (pas d'iframe) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="{% static 'patrimoine/js/dashboardScript.js' %}"></script>
+<script id="bounds-data" type="application/json">
+    {{ bounds_json|safe }}
+</script>
 </body>
 </html>
