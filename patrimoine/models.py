@@ -6,6 +6,8 @@ class Patrimoine(models.Model):
     nom = models.CharField(max_length=100)
     latitude = models.FloatField()
     longitude = models.FloatField()
+    photo = models.ImageField(upload_to='patrimoines/', null=True, blank=True)
+    description = models.TextField(null=True, blank=True)
 
     def __str__(self):
         return self.nom
