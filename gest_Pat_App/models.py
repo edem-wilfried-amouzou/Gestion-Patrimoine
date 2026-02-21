@@ -1,14 +1,28 @@
 from django.db import models
 from django.contrib.auth.models import User
+from PIL import Image
+from django.core.exceptions import ValidationError
+import os
+
+
+def validation_image(image):
+    if image.size > 5 * 1024 * 1024:
+        raise ValidationError("L'image ne doit pas dépasser 5MB.")
+    if not image.name.lower().endswith(('.jpg', '.jpeg', '.png', '.webp')):
+        raise ValidationError("Format d'image non supporté.")
+    
+
 
 class Patrimoine(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     nom = models.CharField(max_length=200, unique=True)
     latitude = models.FloatField()
     longitude = models.FloatField()
-    ville = models.CharField(max_length=100)
+    photo = models.ImageField(upload_to="patrimoine/", null=True, blank=True)
+    polygone = models.JSONField(blank=True, null=True)  
     date_creation = models.DateTimeField(auto_now_add=True)
     date_update = models.DateTimeField(auto_now=True)
+    description = models.TextField(null=True, blank=True)
 
     class Meta:
         verbose_name = 'Patrimoine'
@@ -18,17 +32,69 @@ class Patrimoine(models.Model):
     def __str__(self):
         return self.nom
 
-    '''
-    - l'ecran d'aceuil (nella)
-    - le login (paul) 
-    - le sign up (obed)
-    - la de lutilisateur avec la carte portant les patrimoines (peniel)
-    - la page d'ajoute ( alexis)
-    - api token
-    - api connexion
-    
-    '''
 
-'''
-- IL I
-'''
+class ImagePatrimoine(models.Model):
+
+    patrimoine = models.ForeignKey(
+        "Patrimoine",
+        on_delete=models.CASCADE,
+        related_name="images"
+    )
+
+    image_originale = models.ImageField(
+        upload_to="patrimoines/original/",
+        validators=[validation_image]
+    )
+
+    image_hd = models.ImageField(
+        upload_to="patrimoines/hd/",
+        blank=True,
+        null=True
+    )
+
+    miniature = models.ImageField(
+        upload_to="patrimoines/mini/",
+        blank=True,
+        null=True
+    )
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+
+        if not self.image_originale:
+            return
+
+        try:
+            img = Image.open(self.image_originale.path)
+            img.verify()
+        except Exception:
+            raise ValidationError("Image invalide ou corrompue")
+
+        img = Image.open(self.image_originale.path)
+
+        img_hd = img.copy()
+        img_hd.thumbnail((1600, 1600))
+
+        hd_path = self.image_originale.path.replace("original", "hd")
+        os.makedirs(os.path.dirname(hd_path), exist_ok=True)
+        img_hd.save(hd_path, quality=85, optimize=True)
+
+        img_thumb = img.copy()
+        img_thumb.thumbnail((300, 300))
+
+        thumb_path = self.image_originale.path.replace("original", "mini")
+        os.makedirs(os.path.dirname(thumb_path), exist_ok=True)
+        img_thumb.save(thumb_path, quality=75, optimize=True)
+
+        self.image_hd.name = self.image_originale.name.replace("original", "hd")
+        self.miniature.name = self.image_originale.name.replace("original", "mini")
+
+        super().save(update_fields=["image_hd", "miniature"])
+
+
+class SignInAttempt(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    attempt = models.IntegerField(default=0)
+
+    def __str__(self):
+        return f"{self.user.username} - {self.attempt} attempts"

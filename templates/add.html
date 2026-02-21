@@ -1,40 +1,45 @@
-<!--{% load widget_tweaks %}-->
+{% load widget_tweaks %}
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr" data-theme="synthwave">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ajouter un patrimoine</title>
-    <link href="https://cdn.jsdelivr.net/npm/daisyui@5" rel="stylesheet" type="text/css" />
+     <link href="https://cdn.jsdelivr.net/npm/daisyui@5" rel="stylesheet" type="text/css" />
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <link href="https://cdn.jsdelivr.net/npm/daisyui@5/themes.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
 </head>
 <body class="bg-gray-950 text-gray-200 h-screen overflow-hidden">
 
 <div class="flex h-full p-6 gap-6">
 
-
-    <div class="flex-[7] bg-gray-900 rounded-2xl shadow-2xl p-4 flex flex-col h-full">
-
-        <h2 class="text-xl font-semibold text-white mb-4">
-            🗺 Carte
-        </h2>
-
-        <div id="map" class="flex-1 min-h-[500px] rounded-xl"></div>
-
-    </div>
-
-
-    <div class="flex-[3] bg-gray-900 rounded-2xl shadow-2xl p-6 overflow-y-auto">
+     <div class="flex-[3] bg-gray-900 rounded-2xl shadow-2xl p-6 overflow-y-auto">
 
         <h2 class="text-xl font-semibold text-white mb-6">
             ➕ Ajouter un patrimoine
         </h2>
 
-        <form method="post" class="space-y-5">
+        <form method="post" class="space-y-5" enctype="multipart/form-data">
             {% csrf_token %}
+            <!--<div>
+                <label  class="block mb-2 text-sm font-medium text-gray-300">
+                    Importer un fichier GPX
+                </label>
+                {{form.gpx_file|add_class:"w-full bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"}}
+
+                {% if form.gpx_file.errors %}
+                    <p class="text-red-500 text-sm mt-1">
+                        {{form.gpx_file.errors}}
+                    </p>
+                {% endif %}
+            </div> ---->
 
             {% for field in form %}
+                
                 <div>
                     <label class="block mb-2 text-sm font-medium text-gray-300">
                         {{ field.label }}
@@ -48,8 +53,11 @@
                         </p>
                     {% endif %}
                 </div>
+                
             {% endfor %}
 
+
+            <button type="button" class="w-full bg-gray-600  active:scale-95 transition-all duration-200 text-white py-2 rounded-lg font-semibold shadow-lg" id="localisation">Position actuelle</button>
             <button type="submit"
                 class="w-full bg-blue-600 hover:bg-blue-700 active:scale-95 transition-all duration-200 text-white py-2 rounded-lg font-semibold shadow-lg">
                 Enregistrer
@@ -59,46 +67,280 @@
 
     </div>
 
+    <div class="flex-[7] bg-gray-900 rounded-2xl shadow-2xl p-4 flex flex-col h-full">
+
+        <h2 class="text-xl font-semibold text-white mb-4">
+            🗺 Carte - Cliquez pour placer un marqueur
+        </h2>
+
+        <div id="map" class="flex-1 min-h-[500px] rounded-xl"></div>
+
+    </div>
+
+
+   
+
 </div>
 
-
-
 <script>
+// --- Initialisation de la carte ---
 var map = L.map('map').setView([6.1319, 1.2228], 13);
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: "© OpenStreetMap"
+    attribution: "© OpenStreetMap",
+    maxZoom: 19
 }).addTo(map);
 
 var marker;
 
-map.on('click', function(e) {
+// --- Groupe pour polygones ---
+var design = new L.FeatureGroup();
+map.addLayer(design);
+
+// --- Contrôle Leaflet Draw ---
+var drawControl = new L.Control.Draw({
+    position: 'topleft',
+    draw: {
+        marker: false,
+        circle: false,
+        circlemarker: false,
+        polyline: false,
+        rectangle: true,
+        polygon: true
+    },
+    edit: {
+        featureGroup: design,
+        remove: true
+    }
+});
+map.addControl(drawControl);
+
+// --- POLYGONE ---
+map.on(L.Draw.Event.CREATED, function(e){
+    var layer = e.layer;
+    design.addLayer(layer);
+
+    var latlongs = layer.getLatLngs()[0].map(function(latlng){
+        return [latlng.lat.toFixed(6), latlng.lng.toFixed(6)];
+    });
+    document.getElementById("id_polygone").value = JSON.stringify(latlongs);
+});
+
+map.on('draw:edited', function(e){
+    e.layers.eachLayer(function(layer){
+        var latlongs = layer.getLatLngs()[0].map(function(latlng){
+            return [latlng.lat.toFixed(6), latlng.lng.toFixed(6)];
+        });
+        document.getElementById("id_polygone").value = JSON.stringify(latlongs);
+    });
+});
+
+map.on('draw:deleted', function(e){
+    document.getElementById("id_polygone").value = "";
+});
+
+// --- VILLES ---
+var Ville = {
+    "Lome": [6.1725, 1.2314],
+    "Sokode": [8.9833, 1.1333],
+    "Kara": [9.5511, 1.1860],
+    "Atakpame": [7.5333, 1.1333],
+    "Kpalime": [6.9000, 0.6333],
+    "Aneho": [6.2333, 1.6000],
+    "Tsevie": [6.4333, 1.2167],
+    "Dapaong": [10.8620, 0.2070],
+    "Bassar": [9.2500, 0.7833],
+    "Niamtougou": [9.7670, 1.1050],
+    "Notse": [6.9500, 1.1667],
+    "Badou": [7.5833, 0.6000]
+};
+
+function trouverVilleProche(lat, lng) {
+    var villeProche = null;
+    var distMin = Infinity;
+
+    for (var ville in Ville) {
+        var coords = Ville[ville];
+        var dLat = coords[0] - lat;
+        var dLon = coords[1] - lng;
+        var distance = Math.sqrt(dLat*dLat + dLon*dLon);
+
+        if(distance < distMin) {
+            distMin = distance;
+            villeProche = ville;
+        }
+    }
+    return villeProche;
+}
+
+var villeSelect = document.getElementById("id_ville");
+
+// --- Événement sur la carte pour placer le marqueur ---
+map.on('click', function(e){
     var lat = e.latlng.lat;
     var lng = e.latlng.lng;
 
-    if (marker) {
-        map.removeLayer(marker);
-    }
+    if(marker) map.removeLayer(marker);
 
-    marker = L.marker([lat, lng], {
-        draggable: true   // 👈 ICI
-    }).addTo(map)
-      .bindPopup("Patrimoine ici 📍")
-      .openPopup();
+    marker = L.marker([lat, lng], { draggable: true }).addTo(map)
+        .bindPopup("📍 Patrimoine à placer ici<br><small>Glissez pour ajuster</small>")
+        .openPopup();
 
-
-    marker.on('dragend', function(e) {
-        var position = marker.getLatLng();
-        document.getElementById("id_latitude").value = position.lat.toFixed(6);
-        document.getElementById("id_longitude").value = position.lng.toFixed(6);
-    });
-
-
+    // Mise à jour des champs
     document.getElementById("id_latitude").value = lat.toFixed(6);
     document.getElementById("id_longitude").value = lng.toFixed(6);
+
+    // Sélection automatique de la ville
+    var villeProche = trouverVilleProche(lat, lng);
+    if(villeProche && villeSelect) {
+        villeSelect.value = villeProche;
+    }
+
+    // Drag du marqueur
+    marker.on('dragend', function(){
+        var pos = marker.getLatLng();
+        document.getElementById("id_latitude").value = pos.lat.toFixed(6);
+        document.getElementById("id_longitude").value = pos.lng.toFixed(6);
+
+        var villeProcheDrag = trouverVilleProche(pos.lat, pos.lng);
+        if(villeProcheDrag && villeSelect) {
+            villeSelect.value = villeProcheDrag;
+        }
+    });
 });
 
-</script>
+// --- Sélection manuelle de ville ---
+if(villeSelect) {
+    villeSelect.addEventListener("change", function(){
+        var villeChoisie = this.value;
+        if(villeChoisie in Ville) {
+            var coords = Ville[villeChoisie];
 
+            map.setView(coords, 13);
+
+            if(marker) map.removeLayer(marker);
+            marker = L.marker(coords, { draggable: true }).addTo(map)
+                .bindPopup("📍 Ville sélectionnée : " + villeChoisie)
+                .openPopup();
+
+            document.getElementById("id_latitude").value = coords[0].toFixed(6);
+            document.getElementById("id_longitude").value = coords[1].toFixed(6);
+
+            marker.on('dragend', function(){
+                var pos = marker.getLatLng();
+                document.getElementById("id_latitude").value = pos.lat.toFixed(6);
+                document.getElementById("id_longitude").value = pos.lng.toFixed(6);
+
+                var villeProcheDrag = trouverVilleProche(pos.lat, pos.lng);
+                if(villeProcheDrag && villeSelect) {
+                    villeSelect.value = villeProcheDrag;
+                }
+            });
+        }
+    });
+}
+
+// --- Import GPX ---
+var gpxInput = document.getElementById("id_gpx_file");
+if(gpxInput) {
+    gpxInput.addEventListener("change", function(event){
+        var fichier = event.target.files[0];
+        if(!fichier) return;
+
+        var reader = new FileReader();
+        reader.onload = function(e){
+            var texte = e.target.result;
+            var parser = new DOMParser();
+            var xmlDoc = parser.parseFromString(texte, "application/xml");
+
+            var firstpoint = xmlDoc.getElementsByTagName("trkpt")[0];
+            if(!firstpoint){
+                alert("Fichier GPX invalide ou vide");
+                gpxInput.value = "";
+                return;
+            }
+
+            var lat = parseFloat(firstpoint.getAttribute("lat"));
+            var lng = parseFloat(firstpoint.getAttribute("lon"));
+
+            document.getElementById("id_latitude").value = lat.toFixed(6);
+            document.getElementById("id_longitude").value = lng.toFixed(6);
+
+            var villeProche = trouverVilleProche(lat, lng);
+            if(villeProche && villeSelect) {
+                villeSelect.value = villeProche;
+            }
+
+            if(marker) map.removeLayer(marker);
+            marker = L.marker([lat, lng], { draggable: true }).addTo(map)
+                .bindPopup("📍 Point importé depuis GPX")
+                .openPopup();
+
+            map.setView([lat, lng], 15);
+
+            marker.on('dragend', function(){
+                var pos = marker.getLatLng();
+                document.getElementById("id_latitude").value = pos.lat.toFixed(6);
+                document.getElementById("id_longitude").value = pos.lng.toFixed(6);
+
+                var villeProcheDrag = trouverVilleProche(pos.lat, pos.lng);
+                if(villeProcheDrag && villeSelect) {
+                    villeSelect.value = villeProcheDrag;
+                }
+            });
+        };
+        reader.readAsText(fichier);
+    });
+}
+
+document.getElementById('localisation').addEventListener('click', () => {
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition((position) => {
+            // Récupération des coordonnées
+            const lat = position.coords.latitude.toFixed(6);
+            const lng = position.coords.longitude.toFixed(6);
+
+            // Remplir les champs du formulaire
+            document.getElementById('id_latitude').value = lat;
+            document.getElementById('id_longitude').value = lng;
+
+            // Placer ou déplacer le marqueur
+            if (marker) {
+                marker.setLatLng([lat, lng]);
+            } else {
+                marker = L.marker([lat, lng], { draggable: true }).addTo(map)
+                    .bindPopup("📍 Votre position actuelle")
+                    .openPopup();
+
+                // Permettre de déplacer le marqueur
+                marker.on('dragend', function(){
+                    const pos = marker.getLatLng();
+                    document.getElementById("id_latitude").value = pos.lat.toFixed(6);
+                    document.getElementById("id_longitude").value = pos.lng.toFixed(6);
+                    
+                    const villeProcheDrag = trouverVilleProche(pos.lat, pos.lng);
+                    if(villeProcheDrag && villeSelect) {
+                        villeSelect.value = villeProcheDrag;
+                    }
+                });
+            }
+
+            // Centrer et zoomer sur la position
+            map.setView([lat, lng], 15);
+
+            // Optionnel : mettre la ville automatiquement
+            const villeProche = trouverVilleProche(lat, lng);
+            if(villeProche && villeSelect) {
+                villeSelect.value = villeProche;
+            }
+
+        }, (error) => {
+            alert('Impossible de récupérer votre position : ' + error.message);
+        });
+    } else {
+        alert('Géolocalisation non supportée par votre navigateur.');
+    }
+});
+</script>
 </body>
 </html>

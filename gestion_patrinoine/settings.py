@@ -14,10 +14,26 @@ from pathlib import Path
 from decouple import config
 from datetime import timedelta
 
+import os
+from django.core.management.utils import get_random_secret_key
+print(get_random_secret_key())
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=10),
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=5),
     # "ACCESS_TOKEN_LIFETIME": timedelta(seconds=30),
 }
+
+
+# Pillow is optional at settings import time; import in app code where needed
+try:
+    from PIL import Image  # used by image utilities (import guarded)
+    HAS_PIL = True
+except Exception:
+    Image = None
+    HAS_PIL = False
+
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -46,7 +62,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'rest_framework_simplejwt',
-
+    
+    'widget_tweaks',
     'gest_Pat_App',
     'api',
 ]
@@ -154,6 +171,20 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+STATICFILES_DIRS = [BASE_DIR / "static"]
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
 
 APPEND_SLASH=True
 LOGIN_URL = "sign_in"
+
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'gestpat99@gmail.com'
+EMAIL_HOST_PASSWORD = 'doyk gdoy bqwq rmil'
+# gestionpat@2026
+
+PASSWORD_RESET_TIMEOUT = 3600  # 1 heure en secondes
