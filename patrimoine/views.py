@@ -244,14 +244,23 @@ def export_gpx(request):
     gpx_track.segments.append(gpx_segment)
 
     for p in patrimoines:
-        gpx_segment.points.append(gpxpy.gpx.GPXTrackPoint(
-            latitude=p.latitude, longitude=p.longitude,
-            elevation=0, name=p.nom, description=p.description
-        ))
-        gpx.waypoints.append(gpxpy.gpx.GPXWaypoint(
-            latitude=p.latitude, longitude=p.longitude,
-            elevation=0, name=p.nom, description=p.description
-        ))
+        gpx_segment.points.append(
+        gpxpy.gpx.GPXTrackPoint(
+            latitude=p.latitude,
+            longitude=p.longitude,
+            elevation=0
+        )
+    )
+
+
+    gpx.waypoints.append(gpxpy.gpx.GPXWaypoint(
+        latitude=p.latitude,
+        longitude=p.longitude,
+        elevation=0,
+        name=p.nom,
+        description=p.description
+    ))
+
 
     response = HttpResponse(gpx.to_xml(), content_type='application/gpx+xml')
     response['Content-Disposition'] = f'attachment; filename="patrimoines_{request.user.username}.gpx"'
