@@ -1,4 +1,4 @@
-from django.urls import path
+from django.urls import path, include
 from . import views
 
 
@@ -11,4 +11,5 @@ urlpatterns= [
     path('edit/<int:patrimoine_id>/', views.edit_patrimoine, name='edit_patrimoine'),
     path('delete/<int:patrimoine_id>/', views.delete_patrimoine, name='delete_patrimoine'),
     path('export-gpx/', views.export_gpx, name='export_gpx'),
+    
 ]

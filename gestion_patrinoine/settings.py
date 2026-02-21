@@ -13,14 +13,30 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 from pathlib import Path
 from decouple import config
 from datetime import timedelta
+import os
+from django.core.management.utils import get_random_secret_key
+print(get_random_secret_key())
+
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+# Build paths inside the project like this: BASE_DIR / 'subdir'.
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Pillow is optional at settings import time; import in app code where needed
+try:
+    from PIL import Image  # used by image utilities (import guarded)
+    HAS_PIL = True
+except Exception:
+    Image = None
+    HAS_PIL = False
+
+MEDIA_ROOT = BASE_DIR / "private_media"
+MEDIA_URL = "/secure-media/"
+
 
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=10),
     # "ACCESS_TOKEN_LIFETIME": timedelta(seconds=30),
 }
-
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
-BASE_DIR = Path(__file__).resolve().parent.parent
 
 
 # Quick-start development settings - unsuitable for production
@@ -33,7 +49,7 @@ SECRET_KEY = config('SECRET_KEY')
 # Read DEBUG from env and cast to bool to avoid string pitfalls
 DEBUG = config('DEBUG', default=False, cast=bool)
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0']
 
 
 # Application definition
@@ -155,6 +171,32 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
-APPEND_SLASH=True
+APPEND_SLASH = True
 LOGIN_URL = "sign_in"
+
+# REST Framework Configuration
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 10
+}
+
+# API Base URL for internal requests
+BASE_API_URL = config('BASE_API_URL', default='http://127.0.0.1:8000')
+
+
+# Image-related models and processing must live in an app's `models.py`.
+# Removed `ImagePatrimoine` from settings because importing models at
+# settings load time causes side-effects and can break manage commands.
+# If you need image resizing, add a model and utility functions in
+# `gest_Pat_App/models.py`, and guard Pillow imports with `HAS_PIL` above.
+        
+
+
+
+        
+

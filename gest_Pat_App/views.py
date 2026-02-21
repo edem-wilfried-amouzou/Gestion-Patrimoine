@@ -8,11 +8,11 @@ from django.contrib.auth.models import User
 from http.client import responses
 from statistics import mean
 import gpxpy.gpx
-import requests
 import folium
 
 from .models import Patrimoine
-from .forms import PatrimoineForm
+
+from .utils import api_post
 
 
 def home(request):
@@ -25,13 +25,10 @@ def Sign_in(request):
         username = request.POST.get('username')
         password = request.POST.get('password')
 
-        response = requests.post(
-            "http://127.0.0.1:8000/api/sign_in/",
-            json={
-                "username": username,
-                "password": password
-            }
-        )
+        response = api_post('sign_in', {
+            "username": username,
+            "password": password
+        })
 
         if response.status_code == 200:
             token = response.json().get("access_token")
@@ -56,7 +53,7 @@ def Sign_up(request):
         pw = request.POST.get('pw')
         rp = request.POST.get('re-pw')
 
-        if not pw or not rp:
+        if not pw or not rp or not username or not email:
             return render(request, "sign_up.html", {
                 "error": "Tous les champs sont obligatoires"
             })
@@ -65,51 +62,34 @@ def Sign_up(request):
             validate_password(pw)
         except ValidationError as e:
             errors = e.messages
-            redirect("sign_up")
             return render(request, "sign_up.html", {
                 "error": errors
             })
 
-
-        if pw == rp:
-            response = requests.post(
-                "http://127.0.0.1:8000/api/sign_up/",
-                json={
-                    "username": username,
-                    "email": email,
-                    "password": pw
-                }
-            )
-
-            if response.status_code == 400:
-                error = response.json().get("error")
-                msg = str(error)
-                redirect("sign_up")
-                return render(request, "sign_up.html", { "error": msg})
-
-            if response.status_code == 201:
-                redirect("sign_in")
-                return render(request, "sign_in.html")
-        else:
-            redirect("sign_up")
+        if pw != rp:
             return render(request, "sign_up.html", {
-                "error": "Les mots de passes ne correspondent pas"
+                "error": "Les mots de passe ne correspondent pas"
             })
 
-    redirect("sign_up")
+        response = api_post('sign_up', {
+            "username": username,
+            "email": email,
+            "password": pw
+        })
+
+        if response.status_code == 400:
+            error = response.json().get("error")
+            msg = str(error)
+            return render(request, "sign_up.html", { "error": msg})
+
+        if response.status_code == 201:
+            return redirect("sign_in")
+
     return render(request, "sign_up.html")
 
-        # else:
-        #     msg="Password not valid"
-        #     context = {"msg": msg}
-        #     redirect("sign_in")
-        #     return render(request, "sign_up.html", context)
-
-    return render(request, "sign_up.html", context)
 
 
-
-# @login_required
+@login_required(login_url='sign_in')
 def UserDash(request):
     # Récupération des patrimoine de l'utilisateur connecté
     patrimoines = Patrimoine.objects.filter(user=request.user)
@@ -170,18 +150,38 @@ def UserDash(request):
 #
 #     return JsonResponse({"status": "error", "message": "Méthode non autorisée"})
 
+@login_required(login_url='sign_in')
 def Add(request):
-    form = PatrimoineForm
-    carte = folium.Map(location=[14.7, -17.4],zoom_start=6)
-    carte_html = carte.repr_html()
+    if request.method == "POST":
+        form = PatrimoineForm(request.POST, request.FILES)
+        if form.is_valid():
+            patrimoine = form.save(commit=False)
+            patrimoine.user = request.user
+
+            patrimoine.save()
+            return redirect('dash')
+        else:
+            # Si le formulaire n'est pas valide, réafficher avec erreurs
+            carte = folium.Map(location=[14.7, -17.4], zoom_start=6)
+            carte_html = carte._repr_html_()
+            context = {
+                'form': form,
+                'carte': carte_html
+            }
+            return render(request, 'add.html', context)
+    
+    # GET request - afficher le formulaire vide
+    form = PatrimoineForm()
+    carte = folium.Map(location=[14.7, -17.4], zoom_start=6)
+    carte_html = carte._repr_html_()
     context = {
-        'form':form,
-        'carte':carte_html
+        'form': form,
+        'carte': carte_html
     }
-    return render(request,'geo/ajouter.html',context)
+    return render(request, 'add.html', context)
 
 # ÉDITION PATRIMOINE
-# @login_required
+@login_required(login_url='sign_in')
 def edit_patrimoine(request, patrimoine_id):
     patrimoine = get_object_or_404(Patrimoine, id=patrimoine_id, user=request.user)
 
@@ -204,7 +204,7 @@ def edit_patrimoine(request, patrimoine_id):
 
 
 # SUPPRESSION PATRIMOINE
-# @login_required
+@login_required(login_url='sign_in')
 def delete_patrimoine(request, patrimoine_id):
     patrimoine = get_object_or_404(Patrimoine, id=patrimoine_id, user=request.user)
 
@@ -239,3 +239,73 @@ def export_gpx(request):
     response['Content-Disposition'] = 'attachment; filename="patrimoines.gpx"'
 
     return response
+
+from django import forms
+
+Villes = [
+    ("Lome", "Lomé"),
+    ("Kara", "Kara"),
+    ("Sokode", "Sokodé"),
+    ("Atakpame", "Atakpamé"),
+    ("Kpalime", "Kpalimé"),
+    ("Aneho", "Aného"),
+    ("Tsevie", "Tsévié"),
+    ("Dapaong", "Dapaong"),
+    ("Bassar", "Bassar"),
+    ("Notse", "Notsé"),
+    ("Badou", "Badou"),
+]
+
+class PatrimoineForm(forms.ModelForm):
+
+    polygone = forms.CharField(
+        required=False,
+        widget=forms.HiddenInput()
+    )
+
+    gpx_file = forms.FileField(
+       required=False,
+       label="Importer un fichier GPX"
+   )
+   
+    ville = forms.ChoiceField(
+        choices=Villes,
+        required=True,
+        label="Ville",
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+
+    class Meta:
+        model = Patrimoine
+        fields = [ 'ville','nom', 'latitude', 'longitude','gpx_file', 'image']
+        widgets = {
+            'nom': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Nom du patrimoine'
+            }),
+            'latitude': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'step': '0.000001'
+            }),
+            'longitude': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'step': '0.000001'
+            }),
+        }
+    
+    def clean(self):
+        """Validation personnalisée du formulaire"""
+        cleaned_data = super().clean()
+        lat = cleaned_data.get('latitude')
+        lng = cleaned_data.get('longitude')
+        
+        # Vérifier que les coordonnées sont valides
+        if lat is not None and lng is not None:
+            if not (-90 <= lat <= 90):
+                self.add_error('latitude', 'La latitude doit être entre -90 et 90')
+            if not (-180 <= lng <= 180):
+                self.add_error('longitude', 'La longitude doit être entre -180 et 180')
+        
+        return cleaned_data
+    
+    
