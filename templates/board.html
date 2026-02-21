@@ -398,6 +398,29 @@
                 <i class="fas fa-chevron-right export-option-arrow"></i>
             </a>
 
+            <!-- Option 2 : Envoyer par e-mail -->
+            <button class="export-option export-option--blue" onclick="togglePdfEmailForm()">
+                <div class="export-option-icon export-option-icon--blue">
+                    <i class="fas fa-envelope"></i>
+                </div>
+                <div class="export-option-text">
+                    <div class="export-option-title">Envoyer par e-mail</div>
+                    <div class="export-option-desc">Recevoir le fichier .pdf dans votre boîte mail</div>
+                </div>
+                <i class="fas fa-chevron-right export-option-arrow" id="emailArrowPdf"></i>
+            </button>
+
+            <!-- Formulaire email (masqué par défaut) -->
+            <div id="emailFormPdf" class="email-form">
+                <span class="email-form-label"><i class="fas fa-envelope"></i> Adresse e-mail</span>
+                <input type="email" id="emailInputPdf" class="field-input"
+                       placeholder="exemple@domaine.com"
+                       value="{{ request.user.email|default:'' }}">
+                <button class="email-send-btn" onclick="sendPdfByEmail()" id="emailSendBtnPdf">
+                    <i class="fas fa-paper-plane"></i> Envoyer le PDF
+                </button>
+            </div>
+
             <!-- Info sur le contenu -->
             <div class="export-info-list">
                 <div class="export-info-item"><i class="fas fa-check"></i> Page de garde personnalisée</div>

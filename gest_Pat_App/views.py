@@ -8,7 +8,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth import authenticate, login, logout
 from django.http import HttpResponse, JsonResponse, FileResponse
 from django.contrib.auth.models import User
-from django.core.mail import send_mail
+from django.core.mail import send_mail, EmailMessage
 from datetime import timedelta
 from http.client import responses
 from django.utils import timezone
@@ -404,6 +404,63 @@ def export_gpx(request):
     return response
 
 
+def send_gpx_email(request):
+    if request.method != 'POST':
+        return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée'}, status=405)
+
+    if not request.user.is_authenticated:
+        return JsonResponse({'status': 'error', 'message': 'Authentification requise'}, status=403)
+
+    try:
+        data = json.loads(request.body.decode('utf-8'))
+        recipient = data.get('email')
+    except Exception:
+        recipient = request.POST.get('email')
+
+    if not recipient:
+        return JsonResponse({'status': 'error', 'message': "Adresse e-mail manquante"}, status=400)
+
+    patrimoines = Patrimoine.objects.filter(user=request.user)
+    if not patrimoines.exists():
+        return JsonResponse({'status': 'error', 'message': "Aucun patrimoine à exporter"}, status=404)
+
+    # Générer GPX
+    gpx = gpxpy.gpx.GPX()
+    gpx_track = gpxpy.gpx.GPXTrack()
+    gpx.tracks.append(gpx_track)
+    gpx_segment = gpxpy.gpx.GPXTrackSegment()
+    gpx_track.segments.append(gpx_segment)
+
+    for p in patrimoines:
+        gpx_segment.points.append(
+            gpxpy.gpx.GPXTrackPoint(latitude=p.latitude, longitude=p.longitude, elevation=0)
+        )
+
+        gpx.waypoints.append(gpxpy.gpx.GPXWaypoint(
+            latitude=p.latitude,
+            longitude=p.longitude,
+            elevation=0,
+            name=p.nom,
+            description=p.description
+        ))
+
+    gpx_bytes = gpx.to_xml().encode('utf-8')
+    filename = f'patrimoines_{request.user.username}.gpx'
+
+    try:
+        email = EmailMessage(
+            subject=f'GPX - Patrimoines de {request.user.username}',
+            body=f'Veuillez trouver en pièce jointe le fichier GPX contenant vos patrimoines.',
+            from_email=settings.EMAIL_HOST_USER,
+            to=[recipient]
+        )
+        email.attach(filename, gpx_bytes, 'application/gpx+xml')
+        email.send(fail_silently=False)
+        return JsonResponse({'status': 'success', 'message': 'E-mail envoyé'})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)})
+
+
 # ---------------------------------------------compress_image_for_pdf---------------------------------------------------
 
 def compress_image_for_pdf(image_path, max_width_cm=10, max_height_cm=7, max_kb=300):
@@ -634,6 +691,41 @@ def export_pdf(request):
     response = HttpResponse(buffer, content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="patrimoines_{request.user.username}.pdf"'
     return response
+
+
+def send_pdf_email(request):
+    if request.method != 'POST':
+        return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée'}, status=405)
+
+    if not request.user.is_authenticated:
+        return JsonResponse({'status': 'error', 'message': 'Authentification requise'}, status=403)
+
+    try:
+        data = json.loads(request.body.decode('utf-8'))
+        recipient = data.get('email')
+    except Exception:
+        recipient = request.POST.get('email')
+
+    if not recipient:
+        return JsonResponse({'status': 'error', 'message': "Adresse e-mail manquante"}, status=400)
+
+    try:
+        # Reuse export_pdf to build the PDF response and get bytes
+        resp = export_pdf(request)
+        pdf_bytes = resp.content
+        filename = f'patrimoines_{request.user.username}.pdf'
+
+        email = EmailMessage(
+            subject=f'PDF - Patrimoines de {request.user.username}',
+            body=f'Veuillez trouver en pièce jointe le rapport PDF contenant vos patrimoines.',
+            from_email=settings.EMAIL_HOST_USER,
+            to=[recipient]
+        )
+        email.attach(filename, pdf_bytes, 'application/pdf')
+        email.send(fail_silently=False)
+        return JsonResponse({'status': 'success', 'message': 'E-mail envoyé'})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)})
 
 # --------------------------Itinéraire vers patrimoine-------------------------------------------
 

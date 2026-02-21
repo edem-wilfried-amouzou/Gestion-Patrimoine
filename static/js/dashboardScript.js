@@ -1,4 +1,6 @@
 // dashboardScript.js — Leaflet direct (sans iframe Folium)
+// Apply DaisyUI theme without touching <head>
+
 // Fixes : clics carte, icônes propres, itinéraire multi-points, navigation implémentée
 
 (function () {
@@ -586,4 +588,89 @@ if (boundsData) {
     });
 } else {
     map.setView([centerLat, centerLng], 13);
+}
+
+/* ====== GPX email helpers ====== */
+function toggleEmailForm() {
+    const el = document.getElementById('emailForm');
+    if (!el) return;
+    el.classList.toggle('visible');
+    const arrow = document.getElementById('emailArrow');
+    if (arrow) arrow.classList.toggle('rotated');
+}
+
+async function sendGpxByEmail() {
+    const input = document.getElementById('emailInput');
+    if (!input) return alert('Champ e-mail introuvable');
+    const email = input.value.trim();
+    if (!email) return alert('Veuillez saisir une adresse e-mail');
+
+    const btn = document.querySelector('.email-send-btn');
+    if (btn) { btn.disabled = true; btn.textContent = 'Envoi...'; }
+
+    try {
+        const resp = await fetch('/send-gpx-email/', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ email })
+        });
+        const data = await resp.json();
+        if (data.status === 'success') {
+            alert('E-mail envoyé avec succès');
+            document.getElementById('gpxModal').classList.add('hidden');
+            if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i> Envoyer le GPX'; }
+        } else {
+            alert('Erreur: ' + (data.message || 'Erreur serveur'));
+            if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i> Envoyer le GPX'; }
+        }
+    } catch (err) {
+        console.error(err);
+        alert('Erreur lors de l’envoi. Vérifiez la configuration des e-mails.');
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i> Envoyer le GPX'; }
+    }
+}
+
+function togglePdfEmailForm() {
+    const el = document.getElementById('emailFormPdf');
+    if (!el) return;
+    el.classList.toggle('visible');
+    const arrow = document.getElementById('emailArrowPdf');
+    if (arrow) arrow.classList.toggle('rotated');
+}
+
+async function sendPdfByEmail() {
+    const input = document.getElementById('emailInputPdf');
+    if (!input) return alert('Champ e-mail introuvable');
+    const email = input.value.trim();
+    if (!email) return alert('Veuillez saisir une adresse e-mail');
+
+    const btn = document.getElementById('emailSendBtnPdf');
+    if (btn) { btn.disabled = true; btn.textContent = 'Envoi...'; }
+
+    try {
+        const resp = await fetch('/send-pdf-email/', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ email })
+        });
+        const data = await resp.json();
+        if (data.status === 'success') {
+            alert('E-mail envoyé avec succès');
+            document.getElementById('pdfModal').classList.add('hidden');
+            if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i> Envoyer le PDF'; }
+        } else {
+            alert('Erreur: ' + (data.message || 'Erreur serveur'));
+            if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i> Envoyer le PDF'; }
+        }
+    } catch (err) {
+        console.error(err);
+        alert('Erreur lors de l’envoi. Vérifiez la configuration des e-mails.');
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i> Envoyer le PDF'; }
+    }
 }
