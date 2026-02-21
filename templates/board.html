@@ -4,18 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestion Patrimoine</title>
-    <link href="https://cdn.jsdelivr.net/npm/daisyui@5" rel="stylesheet" type="text/css" />
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-    <link href="https://cdn.jsdelivr.net/npm/daisyui@5/themes.css" rel="stylesheet" type="text/css" />
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
     {% load static %}
     <link rel="stylesheet" href="{% static '/css/style.css' %}">
 </head>
 <body>
 
-<!-- NAVBAR -->
-<!-- NAVBAR -->
+<!-- ═══ NAVBAR ═══ -->
 <nav class="navbar">
     <div class="navbar-brand">
         <div class="brand-icon"><i class="fas fa-map-marked-alt"></i></div>
@@ -25,37 +22,64 @@
         </div>
     </div>
     <div class="navbar-actions">
+
+        <!-- Actions carte -->
         <button class="btn-nav" onclick="window.appHandlers.handleItineraryMode()">
             <i class="fas fa-route"></i><span>Itinéraire</span>
         </button>
         <button class="btn-nav" onclick="window.appHandlers.handleNavigationMode()">
             <i class="fas fa-compass"></i><span>Navigation</span>
         </button>
-        <button class="btn-nav btn-nav--primary" onclick="window.appHandlers.handleAddMode()">
-            <i class="fas fa-plus"></i><span>Ajouter</span>
+
+
+       {% comment %} onclick="window.appHandlers.handleAddMode()"  {% endcomment %}
+
+        <button class="btn-nav btn-nav--primary" >
+            <a href="{% url 'add' %}">
+                <i class="fas fa-plus"></i><span>Ajouter</span>
+            </a>
         </button>
 
-        <!-- BOUTON DE DÉCONNEXION AJOUTÉ ICI -->
-        <form id="logout-form" method="post" action="{% url 'logout' %}" style="display: inline;">
-    {% csrf_token %}
-    <button type="submit" class="btn-nav btn-nav--danger" title="Déconnexion">
-        <i class="fas fa-power-off"></i><span>Déconnexion</span>
-    </button>
-</form>
-</button>
 
+        <!-- Séparateur -->
+        <div class="nav-sep"></div>
+
+        <!-- Boutons export -->
+        <button class="btn-nav btn-nav--gpx" onclick="document.getElementById('gpxModal').classList.remove('hidden')" title="Exporter GPX">
+            <i class="fas fa-route"></i><span>GPX</span>
+        </button>
+        <button class="btn-nav btn-nav--pdf" onclick="document.getElementById('pdfModal').classList.remove('hidden')" title="Exporter PDF">
+            <i class="fas fa-file-pdf"></i><span>PDF</span>
+        </button>
+
+        <!-- Séparateur -->
+        <div class="nav-sep"></div>
+
+        <!-- Déconnexion -->
+        <form id="logout-form" method="post" action="{% url 'logout' %}" style="display:inline;">
+            {% csrf_token %}
+            <button type="submit" class="btn-nav btn-nav--danger" title="Déconnexion">
+                <i class="fas fa-power-off"></i><span>Déconnexion</span>
+            </button>
+        </form>
+
+        <!-- Menu utilisateur -->
         <div class="user-menu">
             <button class="user-btn"><i class="fas fa-user"></i></button>
             <div class="user-dropdown">
                 <div class="dropdown-header"><i class="fas fa-circle-user"></i> {{ request.user.username }}</div>
-                <a href="/export-gpx/" class="dropdown-item"><i class="fas fa-download"></i> Export GPX</a>
-                <a href="/export-pdf/" class="dropdown-item"><i class="fas fa-file-pdf"></i> Export PDF</a>
+                <button class="dropdown-item" onclick="document.getElementById('gpxModal').classList.remove('hidden')">
+                    <i class="fas fa-route"></i> Export GPX
+                </button>
+                <button class="dropdown-item" onclick="document.getElementById('pdfModal').classList.remove('hidden')">
+                    <i class="fas fa-file-pdf"></i> Export PDF
+                </button>
             </div>
         </div>
     </div>
 </nav>
 
-<!-- ACTION BAR -->
+<!-- ═══ ACTION BAR ═══ -->
 <div id="actionBar" class="action-bar hidden">
     <div class="action-bar-inner">
         <div id="addFormContent" class="hidden action-content">
@@ -85,18 +109,18 @@
     </div>
 </div>
 
-<!-- MODE CHIP -->
+<!-- ═══ MODE CHIP ═══ -->
 <div id="modeIndicator" class="mode-chip hidden">
     <span class="mode-dot"></span>
     <span id="modeText">Mode actif</span>
 </div>
 
-<!-- CARTE PRINCIPALE -->
+<!-- ═══ CARTE ═══ -->
 <main class="map-wrapper">
-    <div id="map" class="map-container">{{ map|safe }}</div>
+    <div id="map" class="map-container"></div>
 </main>
 
-<!-- FOOTER -->
+<!-- ═══ FOOTER ═══ -->
 <footer class="footer">
     <div class="footer-top">
         <div class="footer-left">
@@ -163,7 +187,7 @@
     <div class="footer-copy">&copy; Gestion Patrimoine · theme7@pythonproject2026</div>
 </footer>
 
-<!-- PANNEAU ITINÉRAIRE -->
+<!-- ═══ PANNEAU ITINÉRAIRE ═══ -->
 <div id="itineraryPanel" class="side-panel hidden">
     <div class="side-panel-header side-panel-header--purple">
         <span><i class="fas fa-route"></i> Itinéraire</span>
@@ -184,7 +208,7 @@
     </div>
 </div>
 
-<!-- PANNEAU NAVIGATION -->
+<!-- ═══ PANNEAU NAVIGATION ═══ -->
 <div id="navigationPanel" class="side-panel hidden">
     <div class="side-panel-header side-panel-header--teal">
         <span><i class="fas fa-compass"></i> Navigation</span>
@@ -214,7 +238,7 @@
     </div>
 </div>
 
-<!-- MODAL AJOUT -->
+<!-- ═══ MODAL AJOUT ═══ -->
 <div id="addPatrimoineModal" class="modal-overlay hidden">
     <div class="modal-box">
         <div class="modal-header">
@@ -253,7 +277,7 @@
     </div>
 </div>
 
-<!-- MODAL ÉDITION -->
+<!-- ═══ MODAL ÉDITION ═══ -->
 <div id="editModal" class="modal-overlay hidden">
     <div class="modal-box">
         <div class="modal-header">
@@ -293,12 +317,177 @@
     </div>
 </div>
 
+<!-- ═══════════════════════════════════════════════════════
+     MODAL EXPORT GPX
+     ═══════════════════════════════════════════════════════ -->
+<div id="gpxModal" class="modal-overlay hidden">
+    <div class="modal-box modal-box--export modal-box--gpx">
+        <div class="modal-header">
+            <span><i class="fas fa-route"></i> Exporter GPX</span>
+            <button onclick="document.getElementById('gpxModal').classList.add('hidden'); document.getElementById('emailForm').classList.remove('visible');" class="modal-close">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="export-body">
+
+            <!-- Option 1 : Télécharger -->
+            <a href="/export-gpx/"
+               class="export-option export-option--teal"
+               onclick="document.getElementById('gpxModal').classList.add('hidden')">
+                <div class="export-option-icon export-option-icon--teal">
+                    <i class="fas fa-download"></i>
+                </div>
+                <div class="export-option-text">
+                    <div class="export-option-title">Télécharger le fichier</div>
+                    <div class="export-option-desc">Sauvegarder le .gpx directement sur votre appareil</div>
+                </div>
+                <i class="fas fa-chevron-right export-option-arrow"></i>
+            </a>
+
+            <!-- Option 2 : Envoyer par e-mail -->
+            <button class="export-option export-option--blue" onclick="toggleEmailForm()">
+                <div class="export-option-icon export-option-icon--blue">
+                    <i class="fas fa-envelope"></i>
+                </div>
+                <div class="export-option-text">
+                    <div class="export-option-title">Envoyer par e-mail</div>
+                    <div class="export-option-desc">Recevoir le fichier .gpx dans votre boîte mail</div>
+                </div>
+                <i class="fas fa-chevron-right export-option-arrow" id="emailArrow"></i>
+            </button>
+
+            <!-- Formulaire email (masqué par défaut) -->
+            <div id="emailForm" class="email-form">
+                <span class="email-form-label"><i class="fas fa-envelope"></i> Adresse e-mail</span>
+                <input type="email" id="emailInput" class="field-input"
+                       placeholder="exemple@domaine.com"
+                       value="{{ request.user.email|default:'' }}">
+                <button class="email-send-btn" onclick="sendGpxByEmail()">
+                    <i class="fas fa-paper-plane"></i> Envoyer le GPX
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     MODAL EXPORT PDF
+     ═══════════════════════════════════════════════════════ -->
+<div id="pdfModal" class="modal-overlay hidden">
+    <div class="modal-box modal-box--export modal-box--pdf">
+        <div class="modal-header">
+            <span><i class="fas fa-file-pdf"></i> Exporter PDF</span>
+            <button onclick="document.getElementById('pdfModal').classList.add('hidden')" class="modal-close">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="export-body">
+
+            <!-- Option : Télécharger PDF -->
+            <a href="/export-pdf/"
+               class="export-option export-option--amber"
+               onclick="document.getElementById('pdfModal').classList.add('hidden')">
+                <div class="export-option-icon export-option-icon--amber">
+                    <i class="fas fa-download"></i>
+                </div>
+                <div class="export-option-text">
+                    <div class="export-option-title">Télécharger le rapport</div>
+                    <div class="export-option-desc">{{ patrimoines|length }} patrimoine(s) — rapport complet avec photos et coordonnées</div>
+                </div>
+                <i class="fas fa-chevron-right export-option-arrow"></i>
+            </a>
+
+            <!-- Info sur le contenu -->
+            <div class="export-info-list">
+                <div class="export-info-item"><i class="fas fa-check"></i> Page de garde personnalisée</div>
+                <div class="export-info-item"><i class="fas fa-check"></i> Résumé statistique</div>
+                <div class="export-info-item"><i class="fas fa-check"></i> Fiches détaillées avec photos</div>
+                <div class="export-info-item"><i class="fas fa-check"></i> Coordonnées GPS de chaque site</div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- ═══ TOAST ═══ -->
+<div id="toast" class="toast">
+    <i id="toastIcon" class="fas fa-check-circle"></i>
+    <span id="toastMsg">Message</span>
+</div>
+
+<!-- ── Fermeture des modals en cliquant sur l'overlay ── -->
+<script>
+['gpxModal','pdfModal'].forEach(id => {
+    document.getElementById(id).addEventListener('click', function(e){
+        if (e.target === this) {
+            this.classList.add('hidden');
+            if (id === 'gpxModal') document.getElementById('emailForm').classList.remove('visible');
+        }
+    });
+});
+
+function toggleEmailForm() {
+    const form  = document.getElementById('emailForm');
+    const arrow = document.getElementById('emailArrow');
+    const open  = form.classList.toggle('visible');
+    arrow.style.transform = open ? 'rotate(90deg)' : '';
+    if (open) setTimeout(() => document.getElementById('emailInput').focus(), 50);
+}
+
+function showToast(msg, type = 'success') {
+    const toast = document.getElementById('toast');
+    const icon  = document.getElementById('toastIcon');
+    document.getElementById('toastMsg').textContent = msg;
+    toast.className = 'toast toast--' + type;
+    icon.className  = type === 'success' ? 'fas fa-check-circle' : 'fas fa-exclamation-circle';
+    void toast.offsetWidth; // reflow
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 3500);
+}
+
+function sendGpxByEmail() {
+    const email = document.getElementById('emailInput').value.trim();
+    if (!email) { showToast('Veuillez saisir une adresse e-mail.', 'error'); return; }
+
+    const btn = document.querySelector('.email-send-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Envoi…';
+
+    const csrf = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    fetch('/export-gpx-email/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+        body: JSON.stringify({ email })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            document.getElementById('gpxModal').classList.add('hidden');
+            document.getElementById('emailForm').classList.remove('visible');
+            showToast('GPX envoyé à ' + email, 'success');
+        } else {
+            showToast(data.error || 'Erreur lors de l\'envoi.', 'error');
+        }
+    })
+    .catch(() => showToast('Erreur réseau. Réessayez.', 'error'))
+    .finally(() => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-paper-plane"></i> Envoyer le GPX';
+    });
+}
+</script>
+
 {% csrf_token %}
 <script>
-    window.patrimoinesData = {{ patrimoines_json|safe }};
+    window.patrimoinesData       = {{ patrimoines_json|safe }};
     window.othersPatrimoinesData = {{ others_patrimoines_json|default:"[]"|safe }};
-    window.currentUserId = {{ request.user.id }};
+    window.currentUserId         = {{ request.user.id }};
+    window.mapCenterLat          = {{ center_lat }};
+    window.mapCenterLng          = {{ center_lng }};
 </script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="{% static 'js/dashboardScript.js' %}"></script>
+<script id="bounds-data" type="application/json">{{ bounds_json|safe }}</script>
 </body>
 </html>

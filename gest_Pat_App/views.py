@@ -31,6 +31,15 @@ from django.conf import settings
 from PIL import Image as PILImage
 from datetime import datetime
 
+from django.contrib.auth import get_user_model
+from django.shortcuts import render, redirect
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.utils.encoding import force_bytes
+from django.contrib.auth.tokens import default_token_generator
+from django.core.mail import send_mail
+from django.urls import reverse
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError
 
 
 
@@ -176,136 +185,65 @@ def logout_view(request):
 
 # @login_required
 def UserDash(request):
-    """
-    Tableau de bord principal avec la carte Folium.
-    Affiche les patrimoines de l'utilisateur connecté (bleu)
-    et ceux des autres utilisateurs (orange) sur la même carte.
-    """
-    # Patrimoines de l'utilisateur connecté
     patrimoines = Patrimoine.objects.filter(user=request.user).order_by('nom')
+    others_patrimoines = Patrimoine.objects.exclude(user=request.user)\
+                                          .select_related('user')\
+                                          .order_by('nom')
 
-    # Patrimoines des AUTRES utilisateurs
-    others_patrimoines = Patrimoine.objects.exclude(user=request.user).select_related('user').order_by('nom')
+    all_points = list(patrimoines) + list(others_patrimoines)
 
-    # CENTRAGE INTELLIGENT : tous les patrimoines confondus
-    all_lats = [p.latitude for p in patrimoines] + [p.latitude for p in others_patrimoines]
-    all_lngs = [p.longitude for p in patrimoines] + [p.longitude for p in others_patrimoines]
+    if all_points:
+        lats = [p.latitude for p in all_points]
+        lngs = [p.longitude for p in all_points]
 
-    if all_lats:
-        center_lat = mean(all_lats)
-        center_lng = mean(all_lngs)
+        bounds = {
+            "min_lat": min(lats),
+            "max_lat": max(lats),
+            "min_lng": min(lngs),
+            "max_lng": max(lngs),
+        }
+
+        center_lat = sum(lats) / len(lats)
+        center_lng = sum(lngs) / len(lngs)
+
     else:
-        # Centre par défaut (Lomé, Togo)
+        bounds = None
         center_lat = 6.1319
         center_lng = 1.2228
 
-    # CRÉATION CARTE FOLIUM
-    m = folium.Map(
-        location=[center_lat, center_lng],
-        zoom_start=13,
-        tiles='OpenStreetMap'
-    )
-
-    # --- MARQUEURS : MES PATRIMOINES (bleu) ---
-    for p in patrimoines:
-        popup_html = f"""
-        <div style="min-width:180px; max-width:260px; font-family:sans-serif;">
-            <h3 style="margin:0 0 6px 0; color:#0047cc; font-size:14px;">{p.nom}</h3>
-            <p style="margin:4px 0; color:#475569; font-size:12px;">{p.description or 'Aucune description'}</p>
-            <p style="margin:4px 0; color:#94a3b8; font-size:11px;">
-                {p.latitude:.5f}, {p.longitude:.5f}
-            </p>
-        """
-        if p.photo and hasattr(p.photo, 'url'):
-            try:
-                popup_html += f'<img src="{p.photo.url}" style="max-width:100%; height:60px; object-fit:cover; border-radius:6px; margin-top:6px;">'
-            except Exception:
-                pass
-        popup_html += "</div>"
-
-        folium.Marker(
-            [p.latitude, p.longitude],
-            popup=folium.Popup(popup_html, max_width=270),
-            icon=folium.Icon(color="blue", icon="home", prefix="fa"),
-            tooltip=f"🔵 {p.nom}"
-        ).add_to(m)
-
-    # --- MARQUEURS : AUTRES UTILISATEURS (orange) ---
-    for p in others_patrimoines:
-        owner = p.user.username
-        popup_html = f"""
-        <div style="min-width:180px; max-width:260px; font-family:sans-serif;">
-            <div style="background:#fef3c7; border-radius:12px; padding:3px 8px; display:inline-block; margin-bottom:6px; font-size:11px; color:#92400e;">
-                👤 {owner}
-            </div>
-            <h3 style="margin:0 0 6px 0; color:#d97706; font-size:14px;">{p.nom}</h3>
-            <p style="margin:4px 0; color:#475569; font-size:12px;">{p.description or 'Aucune description'}</p>
-            <p style="margin:4px 0; color:#94a3b8; font-size:11px;">
-                {p.latitude:.5f}, {p.longitude:.5f}
-            </p>
-        """
-        if p.photo and hasattr(p.photo, 'url'):
-            try:
-                popup_html += f'<img src="{p.photo.url}" style="max-width:100%; height:60px; object-fit:cover; border-radius:6px; margin-top:6px;">'
-            except Exception:
-                pass
-        popup_html += "</div>"
-
-        folium.Marker(
-            [p.latitude, p.longitude],
-            popup=folium.Popup(popup_html, max_width=270),
-            icon=folium.Icon(color="orange", icon="map-marker", prefix="fa"),
-            tooltip=f"🟠 {p.nom} ({owner})"
-        ).add_to(m)
-
-    # Convertir la carte en HTML
-    map_html = m._repr_html_()
-
-    # --- JSON MES PATRIMOINES ---
+    # JSON mes patrimoines
     patrimoines_json = []
     for p in patrimoines:
-        data = {
+        patrimoines_json.append({
             'id': p.id,
             'nom': p.nom,
             'lat': float(p.latitude),
             'lng': float(p.longitude),
             'description': p.description or '',
-            'photo_url': '',
-        }
-        if p.photo and hasattr(p.photo, 'url'):
-            try:
-                data['photo_url'] = p.photo.url
-            except Exception:
-                pass
-        patrimoines_json.append(data)
+            'photo_url': p.photo.url if p.photo else '',
+        })
 
-    # --- JSON AUTRES PATRIMOINES ---
+    # JSON autres patrimoines
     others_json = []
     for p in others_patrimoines:
-        data = {
+        others_json.append({
             'id': p.id,
             'nom': p.nom,
             'lat': float(p.latitude),
             'lng': float(p.longitude),
             'description': p.description or '',
-            'photo_url': '',
+            'photo_url': p.photo.url if p.photo else '',
             'owner_username': p.user.username,
             'owner_id': p.user.id,
-        }
-        if p.photo and hasattr(p.photo, 'url'):
-            try:
-                data['photo_url'] = p.photo.url
-            except Exception:
-                pass
-        others_json.append(data)
+        })
 
     return render(request, 'board.html', {
-        'map': map_html,
         'patrimoines': patrimoines,
         'patrimoines_json': json.dumps(patrimoines_json),
         'others_patrimoines_json': json.dumps(others_json),
         'center_lat': center_lat,
         'center_lng': center_lng,
+        'bounds_json': json.dumps(bounds),
     })
 
 
@@ -314,44 +252,32 @@ def UserDash(request):
 
 def Add(request):
     if request.method == "POST":
-        try:
-            nom = request.POST.get("nom")
-            lat = request.POST.get("latitude")
-            lng = request.POST.get("longitude")
-            description = request.POST.get("description", "")
-            photo = request.FILES.get("photo")
+        form = PatrimoineForm(request.POST, request.FILES)
+        if form.is_valid():
+            patrimoine = form.save(commit=False)
+            patrimoine.user = request.user
 
-            if not nom or not lat or not lng:
-                return JsonResponse({"status": "error", "message": "Tous les champs sont requis"})
-
-            patrimoine = Patrimoine.objects.create(
-                user=request.user,
-                nom=nom,
-                latitude=float(lat),
-                longitude=float(lng),
-                description=description,
-                photo=photo
-            )
-
-            return JsonResponse({
-                "status": "success",
-                "message": "Patrimoine ajouté avec succès",
-                "patrimoine": {
-                    "id": patrimoine.id,
-                    "nom": patrimoine.nom,
-                    "lat": float(patrimoine.latitude),
-                    "lng": float(patrimoine.longitude),
-                    "description": patrimoine.description,
-                    "photo_url": patrimoine.photo.url if patrimoine.photo else ""
-                }
-            })
-        except ValueError:
-            return JsonResponse({"status": "error", "message": "Coordonnées invalides"})
-        except Exception as e:
-            return JsonResponse({"status": "error", "message": str(e)})
-
-    return JsonResponse({"status": "error", "message": "Méthode non autorisée"})
-
+            patrimoine.save()
+            return redirect('dash')
+        else:
+            # Si le formulaire n'est pas valide, réafficher avec erreurs
+            carte = folium.Map(location=[14.7, -17.4], zoom_start=6)
+            carte_html = carte._repr_html_()
+            context = {
+                'form': form,
+                'carte': carte_html
+            }
+            return render(request, 'add.html', context)
+    
+    # GET request - afficher le formulaire vide
+    form = PatrimoineForm()
+    carte = folium.Map(location=[14.7, -17.4], zoom_start=6)
+    carte_html = carte._repr_html_()
+    context = {
+        'form': form,
+        'carte': carte_html
+    }
+    return render(request, 'add.html', context)
 
 # def Add(request):
 #     form = PatrimoineForm
@@ -455,14 +381,23 @@ def export_gpx(request):
     gpx_track.segments.append(gpx_segment)
 
     for p in patrimoines:
-        gpx_segment.points.append(gpxpy.gpx.GPXTrackPoint(
-            latitude=p.latitude, longitude=p.longitude,
-            elevation=0, name=p.nom, description=p.description
-        ))
-        gpx.waypoints.append(gpxpy.gpx.GPXWaypoint(
-            latitude=p.latitude, longitude=p.longitude,
-            elevation=0, name=p.nom, description=p.description
-        ))
+        gpx_segment.points.append(
+        gpxpy.gpx.GPXTrackPoint(
+            latitude=p.latitude,
+            longitude=p.longitude,
+            elevation=0
+        )
+    )
+
+
+    gpx.waypoints.append(gpxpy.gpx.GPXWaypoint(
+        latitude=p.latitude,
+        longitude=p.longitude,
+        elevation=0,
+        name=p.nom,
+        description=p.description
+    ))
+
 
     response = HttpResponse(gpx.to_xml(), content_type='application/gpx+xml')
     response['Content-Disposition'] = f'attachment; filename="patrimoines_{request.user.username}.gpx"'
@@ -472,13 +407,8 @@ def export_gpx(request):
 # ---------------------------------------------compress_image_for_pdf---------------------------------------------------
 
 def compress_image_for_pdf(image_path, max_width_cm=10, max_height_cm=7, max_kb=300):
-    """
-    Compresse une image pour l'insertion dans le PDF.
-    Retourne un BytesIO de l'image compressée ou None si erreur.
-    """
     try:
         with PILImage.open(image_path) as img:
-            # Convertir en RGB si nécessaire (PNG avec transparence, etc.)
             if img.mode in ('RGBA', 'P', 'LA'):
                 background = PILImage.new('RGB', img.size, (255, 255, 255))
                 if img.mode == 'P':
@@ -488,41 +418,30 @@ def compress_image_for_pdf(image_path, max_width_cm=10, max_height_cm=7, max_kb=
             elif img.mode != 'RGB':
                 img = img.convert('RGB')
 
-            # Redimensionner proportionnellement
-            # max_width_cm * 28.35 px/cm ≈ pixels à 72dpi
-            max_w_px = int(max_width_cm * 28.35 * 2)   # ~567px pour 10cm
-            max_h_px = int(max_height_cm * 28.35 * 2)  # ~397px pour 7cm
-
+            max_w_px = int(max_width_cm * 28.35 * 2)
+            max_h_px = int(max_height_cm * 28.35 * 2)
             img.thumbnail((max_w_px, max_h_px), PILImage.LANCZOS)
 
-            # Compression JPEG progressive avec qualité ajustée
             output = BytesIO()
             quality = 75
             img.save(output, format='JPEG', quality=quality, optimize=True, progressive=True)
 
-            # Si encore trop lourd, réduire la qualité
             while output.tell() > max_kb * 1024 and quality > 30:
                 quality -= 10
                 output = BytesIO()
                 img.save(output, format='JPEG', quality=quality, optimize=True, progressive=True)
 
             output.seek(0)
-            return output, img.size  # (buffer, (width_px, height_px))
+            return output, img.size
     except Exception as e:
         print(f"Erreur compression image: {e}")
         return None, None
     
 # ----------------------------------------------Export PDF---------------------------------------------------
 def export_pdf(request):
-    """
-    Export PDF clean, photos compressées, taille max ~5 MB.
-    Design : une page de garde + une fiche par patrimoine sur 2 colonnes.
-    """
     patrimoines = Patrimoine.objects.filter(user=request.user).order_by('nom')
-
     buffer = BytesIO()
 
-    # Marges réduites pour gagner de la place
     doc = SimpleDocTemplate(
         buffer,
         pagesize=A4,
@@ -532,123 +451,51 @@ def export_pdf(request):
         bottomMargin=2 * cm,
     )
 
-    # ── Couleurs ──────────────────────────────────────────────────────────────
     BLUE       = colors.HexColor('#0047cc')
     BLUE_LIGHT = colors.HexColor('#eef5ff')
     BLUE_MID   = colors.HexColor('#0066ff')
     SLATE      = colors.HexColor('#475569')
     SLATE_DARK = colors.HexColor('#1e293b')
-    ORANGE     = colors.HexColor('#f59e0b')
     WHITE      = colors.white
     GREY_LINE  = colors.HexColor('#e2e8f0')
 
-    # ── Styles ────────────────────────────────────────────────────────────────
     styles = getSampleStyleSheet()
 
-    style_cover_title = ParagraphStyle(
-        'CoverTitle',
-        fontName='Helvetica-Bold',
-        fontSize=28,
-        textColor=WHITE,
-        alignment=TA_CENTER,
-        spaceAfter=6,
-    )
-    style_cover_sub = ParagraphStyle(
-        'CoverSub',
-        fontName='Helvetica',
-        fontSize=13,
-        textColor=colors.HexColor('#bcd6ff'),
-        alignment=TA_CENTER,
-        spaceAfter=4,
-    )
-    style_cover_date = ParagraphStyle(
-        'CoverDate',
-        fontName='Helvetica',
-        fontSize=10,
-        textColor=colors.HexColor('#8ebcff'),
-        alignment=TA_CENTER,
-    )
-    style_section_title = ParagraphStyle(
-        'SectionTitle',
-        fontName='Helvetica-Bold',
-        fontSize=14,
-        textColor=BLUE,
-        spaceBefore=10,
-        spaceAfter=4,
-    )
-    style_card_title = ParagraphStyle(
-        'CardTitle',
-        fontName='Helvetica-Bold',
-        fontSize=11,
-        textColor=SLATE_DARK,
-        spaceAfter=3,
-    )
-    style_label = ParagraphStyle(
-        'Label',
-        fontName='Helvetica-Bold',
-        fontSize=8,
-        textColor=BLUE_MID,
-        spaceAfter=1,
-    )
-    style_value = ParagraphStyle(
-        'Value',
-        fontName='Helvetica',
-        fontSize=9,
-        textColor=SLATE,
-        spaceAfter=4,
-        leading=13,
-    )
-    style_footer = ParagraphStyle(
-        'Footer',
-        fontName='Helvetica',
-        fontSize=8,
-        textColor=colors.HexColor('#94a3b8'),
-        alignment=TA_CENTER,
-    )
-    style_no_data = ParagraphStyle(
-        'NoData',
-        fontName='Helvetica-Oblique',
-        fontSize=10,
-        textColor=colors.HexColor('#94a3b8'),
-        alignment=TA_CENTER,
-        spaceAfter=20,
-    )
+    style_cover_title = ParagraphStyle('CoverTitle', fontName='Helvetica-Bold', fontSize=28, textColor=WHITE, alignment=TA_CENTER, spaceAfter=6)
+    style_cover_sub   = ParagraphStyle('CoverSub', fontName='Helvetica', fontSize=13, textColor=colors.HexColor('#bcd6ff'), alignment=TA_CENTER, spaceAfter=4)
+    style_cover_date  = ParagraphStyle('CoverDate', fontName='Helvetica', fontSize=10, textColor=colors.HexColor('#8ebcff'), alignment=TA_CENTER)
+    style_section_title = ParagraphStyle('SectionTitle', fontName='Helvetica-Bold', fontSize=14, textColor=BLUE, spaceBefore=10, spaceAfter=4)
+    style_card_title  = ParagraphStyle('CardTitle', fontName='Helvetica-Bold', fontSize=11, textColor=SLATE_DARK, spaceAfter=3)
+    style_label       = ParagraphStyle('Label', fontName='Helvetica-Bold', fontSize=8, textColor=BLUE_MID, spaceAfter=1)
+    style_value       = ParagraphStyle('Value', fontName='Helvetica', fontSize=9, textColor=SLATE, spaceAfter=4, leading=13)
+    style_footer      = ParagraphStyle('Footer', fontName='Helvetica', fontSize=8, textColor=colors.HexColor('#94a3b8'), alignment=TA_CENTER)
+    style_no_data     = ParagraphStyle('NoData', fontName='Helvetica-Oblique', fontSize=10, textColor=colors.HexColor('#94a3b8'), alignment=TA_CENTER, spaceAfter=20)
 
     elements = []
+    page_w = A4[0] - 3 * cm
 
-    # ══════════════════════════════════════════════════════════════════════════
-    # PAGE DE GARDE avec fond bleu via tableau pleine page
-    # ══════════════════════════════════════════════════════════════════════════
-    page_w = A4[0] - 3 * cm   # largeur utile
-
-    cover_data = [[
-        Paragraph("Gestion Patrimoine", style_cover_title),
-    ]]
+    cover_data = [[Paragraph("Gestion Patrimoine", style_cover_title)]]
     cover_table = Table(cover_data, colWidths=[page_w])
     cover_table.setStyle(TableStyle([
-        ('BACKGROUND',  (0, 0), (-1, -1), BLUE),
-        ('ROUNDEDCORNERS', [12]),
-        ('ALIGN',       (0, 0), (-1, -1), 'CENTER'),
-        ('VALIGN',      (0, 0), (-1, -1), 'MIDDLE'),
-        ('TOPPADDING',  (0, 0), (-1, -1), 40),
+        ('BACKGROUND', (0, 0), (-1, -1), BLUE),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('TOPPADDING', (0, 0), (-1, -1), 40),
         ('BOTTOMPADDING', (0, 0), (-1, -1), 40),
     ]))
     elements.append(cover_table)
     elements.append(Spacer(1, 14))
 
-    # Sous-titre et métadonnées
-    sub_data = [[
-        Paragraph(f"Rapport de patrimoine · {request.user.username}", style_cover_sub),
-    ], [
-        Paragraph(f"Généré le {datetime.now().strftime('%d %B %Y à %H:%M')}", style_cover_date),
-    ], [
-        Paragraph(f"{patrimoines.count()} site(s) enregistré(s)", style_cover_date),
-    ]]
+    sub_data = [
+        [Paragraph(f"Rapport de patrimoine · {request.user.username}", style_cover_sub)],
+        [Paragraph(f"Généré le {datetime.now().strftime('%d %B %Y à %H:%M')}", style_cover_date)],
+        [Paragraph(f"{patrimoines.count()} site(s) enregistré(s)", style_cover_date)],
+    ]
     sub_table = Table(sub_data, colWidths=[page_w])
     sub_table.setStyle(TableStyle([
-        ('ALIGN',   (0, 0), (-1, -1), 'CENTER'),
-        ('VALIGN',  (0, 0), (-1, -1), 'MIDDLE'),
-        ('TOPPADDING',    (0, 0), (-1, -1), 4),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('TOPPADDING', (0, 0), (-1, -1), 4),
         ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
     ]))
     elements.append(sub_table)
@@ -656,9 +503,6 @@ def export_pdf(request):
     elements.append(HRFlowable(width=page_w, thickness=1, color=GREY_LINE))
     elements.append(Spacer(1, 20))
 
-    # ══════════════════════════════════════════════════════════════════════════
-    # Cas : aucun patrimoine
-    # ══════════════════════════════════════════════════════════════════════════
     if not patrimoines.exists():
         elements.append(Paragraph("Aucun patrimoine enregistré.", style_no_data))
         doc.build(elements)
@@ -667,88 +511,58 @@ def export_pdf(request):
         response['Content-Disposition'] = f'attachment; filename="patrimoines_{request.user.username}.pdf"'
         return response
 
-    # ══════════════════════════════════════════════════════════════════════════
-    # RÉSUMÉ STATISTIQUE (tableau compact)
-    # ══════════════════════════════════════════════════════════════════════════
     elements.append(Paragraph("Résumé", style_section_title))
     elements.append(Spacer(1, 6))
 
     nb_photos = sum(1 for p in patrimoines if p.photo)
     summary_data = [
         ['Sites totaux', 'Avec photo', 'Sans photo'],
-        [
-            str(patrimoines.count()),
-            str(nb_photos),
-            str(patrimoines.count() - nb_photos),
-        ]
+        [str(patrimoines.count()), str(nb_photos), str(patrimoines.count() - nb_photos)],
     ]
     summary_table = Table(summary_data, colWidths=[page_w / 3] * 3)
     summary_table.setStyle(TableStyle([
-        ('BACKGROUND',    (0, 0), (-1, 0), BLUE),
-        ('TEXTCOLOR',     (0, 0), (-1, 0), WHITE),
-        ('FONTNAME',      (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('FONTSIZE',      (0, 0), (-1, -1), 9),
-        ('ALIGN',         (0, 0), (-1, -1), 'CENTER'),
-        ('VALIGN',        (0, 0), (-1, -1), 'MIDDLE'),
-        ('TOPPADDING',    (0, 0), (-1, -1), 6),
+        ('BACKGROUND', (0, 0), (-1, 0), BLUE),
+        ('TEXTCOLOR', (0, 0), (-1, 0), WHITE),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 9),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('TOPPADDING', (0, 0), (-1, -1), 6),
         ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
-        ('BACKGROUND',    (0, 1), (-1, 1), BLUE_LIGHT),
-        ('TEXTCOLOR',     (0, 1), (-1, 1), SLATE_DARK),
-        ('GRID',          (0, 0), (-1, -1), 0.5, GREY_LINE),
-        ('ROUNDEDCORNERS', [6]),
+        ('BACKGROUND', (0, 1), (-1, 1), BLUE_LIGHT),
+        ('TEXTCOLOR', (0, 1), (-1, 1), SLATE_DARK),
+        ('GRID', (0, 0), (-1, -1), 0.5, GREY_LINE),
     ]))
     elements.append(summary_table)
     elements.append(Spacer(1, 24))
     elements.append(HRFlowable(width=page_w, thickness=1, color=GREY_LINE))
     elements.append(Spacer(1, 16))
 
-    # ══════════════════════════════════════════════════════════════════════════
-    # FICHES PATRIMOINES — 2 par ligne
-    # ══════════════════════════════════════════════════════════════════════════
     elements.append(Paragraph("Fiches des sites", style_section_title))
     elements.append(Spacer(1, 8))
 
-    col_w = (page_w - 0.5 * cm) / 2  # largeur d'une colonne (2 cols + gap)
-
+    col_w = (page_w - 0.5 * cm) / 2
     patrimoine_list = list(patrimoines)
-    # Grouper par paires
     pairs = [patrimoine_list[i:i+2] for i in range(0, len(patrimoine_list), 2)]
 
     for pair in pairs:
         row_cells = []
 
         for p in pair:
-            # ── Contenu de la fiche ──────────────────────────────────────────
             cell_content = []
-
-            # Numéro + nom
             idx = patrimoine_list.index(p) + 1
             cell_content.append(Paragraph(f"{idx}. {p.nom}", style_card_title))
-
-            # Coordonnées
             cell_content.append(Paragraph("Coordonnées", style_label))
-            cell_content.append(Paragraph(
-                f"{p.latitude:.5f}, {p.longitude:.5f}", style_value
-            ))
-
-            # Description
+            cell_content.append(Paragraph(f"{p.latitude:.5f}, {p.longitude:.5f}", style_value))
             cell_content.append(Paragraph("Description", style_label))
             desc = (p.description or "Aucune description")
-            # Tronquer si trop long
             if len(desc) > 200:
                 desc = desc[:197] + "..."
             cell_content.append(Paragraph(desc, style_value))
 
-            # Photo compressée
             if p.photo and hasattr(p.photo, 'path') and os.path.exists(p.photo.path):
-                compressed, size = compress_image_for_pdf(
-                    p.photo.path,
-                    max_width_cm=col_w / cm - 0.6,
-                    max_height_cm=5,
-                    max_kb=250
-                )
+                compressed, size = compress_image_for_pdf(p.photo.path, max_width_cm=col_w / cm - 0.6, max_height_cm=5, max_kb=250)
                 if compressed:
-                    # Calculer dimensions réelles en cm pour ReportLab
                     if size:
                         ratio = size[0] / size[1]
                         img_w = min(col_w - 0.5 * cm, 9 * cm)
@@ -758,7 +572,6 @@ def export_pdf(request):
                             img_w = img_h * ratio
                     else:
                         img_w, img_h = 7 * cm, 5 * cm
-
                     try:
                         rl_img = RLImage(compressed, width=img_w, height=img_h)
                         cell_content.append(Spacer(1, 4))
@@ -772,52 +585,41 @@ def export_pdf(request):
 
             row_cells.append(cell_content)
 
-        # Si paire incomplète (dernier patrimoine seul), ajouter cellule vide
         if len(row_cells) == 1:
             row_cells.append([Paragraph("", style_value)])
 
-        # Construire le tableau 2 colonnes pour cette paire
-        # Chaque cellule est une liste de flowables → on les imbrique dans un sous-tableau
         def make_card(content_list):
-            """Encapsule le contenu dans un mini-tableau stylé (carte)."""
             inner_data = [[item] for item in content_list]
             inner = Table(inner_data, colWidths=[col_w - 0.4 * cm])
             inner.setStyle(TableStyle([
-                ('ALIGN',         (0, 0), (-1, -1), 'LEFT'),
-                ('VALIGN',        (0, 0), (-1, -1), 'TOP'),
-                ('TOPPADDING',    (0, 0), (-1, -1), 2),
+                ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                ('TOPPADDING', (0, 0), (-1, -1), 2),
                 ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
-                ('LEFTPADDING',   (0, 0), (-1, -1), 0),
-                ('RIGHTPADDING',  (0, 0), (-1, -1), 0),
+                ('LEFTPADDING', (0, 0), (-1, -1), 0),
+                ('RIGHTPADDING', (0, 0), (-1, -1), 0),
             ]))
             return inner
 
         left_card  = make_card(row_cells[0])
         right_card = make_card(row_cells[1])
 
-        row_table = Table(
-            [[left_card, right_card]],
-            colWidths=[col_w, col_w],
-            hAlign='LEFT'
-        )
+        row_table = Table([[left_card, right_card]], colWidths=[col_w, col_w], hAlign='LEFT')
         row_table.setStyle(TableStyle([
-            ('BACKGROUND',    (0, 0), (0, 0), BLUE_LIGHT),
-            ('BACKGROUND',    (1, 0), (1, 0), colors.HexColor('#f8fafc')),
-            ('BOX',           (0, 0), (0, 0), 0.8, BLUE_MID),
-            ('BOX',           (1, 0), (1, 0), 0.8, GREY_LINE),
-            ('ROUNDEDCORNERS', [8]),
-            ('TOPPADDING',    (0, 0), (-1, -1), 10),
+            ('BACKGROUND', (0, 0), (0, 0), BLUE_LIGHT),
+            ('BACKGROUND', (1, 0), (1, 0), colors.HexColor('#f8fafc')),
+            ('BOX', (0, 0), (0, 0), 0.8, BLUE_MID),
+            ('BOX', (1, 0), (1, 0), 0.8, GREY_LINE),
+            ('TOPPADDING', (0, 0), (-1, -1), 10),
             ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
-            ('LEFTPADDING',   (0, 0), (-1, -1), 10),
-            ('RIGHTPADDING',  (0, 0), (-1, -1), 10),
-            ('VALIGN',        (0, 0), (-1, -1), 'TOP'),
-            ('COLPADDING',    (0, 0), (-1, -1), 5),
+            ('LEFTPADDING', (0, 0), (-1, -1), 10),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 10),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
         ]))
 
         elements.append(row_table)
         elements.append(Spacer(1, 10))
 
-    # ── Pied de page ──────────────────────────────────────────────────────────
     elements.append(Spacer(1, 20))
     elements.append(HRFlowable(width=page_w, thickness=1, color=GREY_LINE))
     elements.append(Spacer(1, 6))
@@ -826,16 +628,8 @@ def export_pdf(request):
         style_footer
     ))
 
-    # ── Build ─────────────────────────────────────────────────────────────────
     doc.build(elements)
     buffer.seek(0)
-
-    # Vérifier la taille (max 5 MB)
-    pdf_size = buffer.getbuffer().nbytes
-    if pdf_size > 5 * 1024 * 1024:
-        # Re-compresser plus agressivement si dépassement
-        # (en pratique rare avec nos paramètres actuels)
-        pass
 
     response = HttpResponse(buffer, content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="patrimoines_{request.user.username}.pdf"'
@@ -897,7 +691,49 @@ def itinerary_to_patrimoine(request):
 
     return JsonResponse({"status": "error", "message": "Méthode non autorisée"})
 
-# ----------------------------------------------Get Patrimoines JSON---------------------------------------------------
+# ------------------------Iti multiples -------------------------------
+def itinerary_multi(request):
+    """Calcule un itinéraire multi-points via OSRM."""
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+            points = data.get('points', [])  # [{lat, lng}, ...]
+            mode = data.get('mode', 'driving')
+
+            if len(points) < 2:
+                return JsonResponse({"status": "error", "message": "Au moins 2 points requis"})
+
+            if mode not in ['driving', 'walking', 'cycling']:
+                mode = 'driving'
+
+            coords = ';'.join(f"{p['lng']},{p['lat']}" for p in points)
+            osrm_url = (
+                f"https://router.project-osrm.org/route/v1/{mode}/{coords}"
+                f"?overview=full&geometries=geojson"
+            )
+            resp = requests.get(osrm_url, timeout=10)
+            result = resp.json()
+
+            if result.get('code') == 'Ok':
+                route = result['routes'][0]
+                return JsonResponse({
+                    "status": "success",
+                    "geometry": route['geometry'],
+                    "distance": route['distance'],
+                    "duration": route['duration'],
+                })
+            else:
+                return JsonResponse({"status": "error", "message": "Impossible de calculer l'itinéraire"})
+
+        except requests.exceptions.Timeout:
+            return JsonResponse({"status": "error", "message": "Timeout"})
+        except Exception as e:
+            return JsonResponse({"status": "error", "message": str(e)})
+
+    return JsonResponse({"status": "error", "message": "Méthode non autorisée"})
+
+# --------------------------------------------Get Patrimoines JSON---------------------------------------------------
+
 
 def get_patrimoines_json(request):
     patrimoines = Patrimoine.objects.filter(user=request.user)
@@ -919,4 +755,149 @@ def get_patrimoines_json(request):
         data.append(item)
     return JsonResponse(data, safe=False)
 
+# ---------------------------Reset password---------------------------------------------------
 
+User = get_user_model()
+
+def password_reset_request(request):
+    if request.method == "POST":
+        email = request.POST.get("email")
+
+        # On ne révèle jamais si l'email existe ou pas
+        try:
+            user = User.objects.get(email=email)
+
+            uid = urlsafe_base64_encode(force_bytes(user.pk))
+            token = default_token_generator.make_token(user)
+
+            reset_link = request.build_absolute_uri(
+                reverse("password_reset_confirm", kwargs={
+                    "uidb64": uid,
+                    "token": token
+                })
+            )
+
+            send_mail(
+                subject="Réinitialisation de votre mot de passe",
+                message=f"""
+Bonjour {user.username},
+
+Cliquez sur le lien ci-dessous pour réinitialiser votre mot de passe :
+
+{reset_link}
+
+Ce lien expire dans 1 heure.
+""",
+                from_email="gestpat99@gmail.com",
+                recipient_list=[email],
+            )
+
+        except User.DoesNotExist:
+            return render(request, "password_reset.html", {
+                "error": "Mot de passe incorrect ou email non enregistré"
+            })
+
+        return render(request, "password_reset_done.html")
+
+    return render(request, "password_reset.html")
+
+
+
+def password_reset_confirm(request, uidb64, token):
+    try:
+        uid = urlsafe_base64_decode(uidb64).decode()
+        user = User.objects.get(pk=uid)
+    except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+        user = None
+
+    if user is not None and default_token_generator.check_token(user, token):
+        if request.method == "POST":
+            pw1 = request.POST.get("new_pw")
+
+            try:
+                validate_password(pw1, user=user)
+            except ValidationError as e:
+                return render(request, "password_reset_confirm.html", {
+                    "error": e.messages[0]
+                })
+            if True:
+                user.set_password(pw1)
+                user.save()
+                return redirect("sign_in")
+
+        # GET: afficher le formulaire de réinitialisation sans message d'erreur
+        return render(request, "password_reset_confirm.html", {
+            "uidb64": uidb64,
+            "token": token
+        })
+    return render(request, "password_reset_invalid.html")
+
+# ---------------------------------------------------------------------------------------------------------
+
+from django import forms
+
+Villes = [
+    ("Lome", "Lomé"),
+    ("Kara", "Kara"),
+    ("Sokode", "Sokodé"),
+    ("Atakpame", "Atakpamé"),
+    ("Kpalime", "Kpalimé"),
+    ("Aneho", "Aného"),
+    ("Tsevie", "Tsévié"),
+    ("Dapaong", "Dapaong"),
+    ("Bassar", "Bassar"),
+    ("Notse", "Notsé"),
+    ("Badou", "Badou"),
+]
+
+class PatrimoineForm(forms.ModelForm):
+
+    polygone = forms.CharField(
+        required=False,
+        widget=forms.HiddenInput()
+    )
+
+    gpx_file = forms.FileField(
+       required=False,
+       label="Importer un fichier GPX"
+   )
+   
+    ville = forms.ChoiceField(
+        choices=Villes,
+        required=True,
+        label="Ville",
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+
+    class Meta:
+        model = Patrimoine
+        fields = [ 'ville','nom', 'latitude', 'longitude','gpx_file', 'photo']
+        widgets = {
+            'nom': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Nom du patrimoine'
+            }),
+            'latitude': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'step': '0.000001'
+            }),
+            'longitude': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'step': '0.000001'
+            }),
+        }
+    
+    def clean(self):
+        """Validation personnalisée du formulaire"""
+        cleaned_data = super().clean()
+        lat = cleaned_data.get('latitude')
+        lng = cleaned_data.get('longitude')
+        
+        # Vérifier que les coordonnées sont valides
+        if lat is not None and lng is not None:
+            if not (-90 <= lat <= 90):
+                self.add_error('latitude', 'La latitude doit être entre -90 et 90')
+            if not (-180 <= lng <= 180):
+                self.add_error('longitude', 'La longitude doit être entre -180 et 180')
+        
+        return cleaned_data

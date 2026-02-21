@@ -50,8 +50,10 @@ PUBLIC_PATHS = [
     "/sign_in/",
     "/sign_up/",
     "/admin/",
+    "/reset/",
     "/auth/google/login/",
     "/auth/google/callback/",
+    "/password-reset/",
 ]
 
 class TokenVerificationMiddleware:
