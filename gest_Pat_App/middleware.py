@@ -52,7 +52,7 @@ PUBLIC_PATHS = [
     "/admin/",
     "/reset/",
     "/password-reset/",
-    "/accounts/",   # ✅ Ajouter
+    "/accounts/",
 ]
 
 class TokenVerificationMiddleware:
