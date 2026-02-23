@@ -424,7 +424,7 @@ def send_gpx_email(request):
     if not patrimoines.exists():
         return JsonResponse({'status': 'error', 'message': "Aucun patrimoine à exporter"}, status=404)
 
-    # Générer GPX
+    # Généreration GPX
     gpx = gpxpy.gpx.GPX()
     gpx_track = gpxpy.gpx.GPXTrack()
     gpx.tracks.append(gpx_track)
@@ -710,7 +710,6 @@ def send_pdf_email(request):
         return JsonResponse({'status': 'error', 'message': "Adresse e-mail manquante"}, status=400)
 
     try:
-        # Reuse export_pdf to build the PDF response and get bytes
         resp = export_pdf(request)
         pdf_bytes = resp.content
         filename = f'patrimoines_{request.user.username}.pdf'

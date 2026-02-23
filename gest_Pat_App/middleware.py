@@ -71,7 +71,7 @@ class TokenVerificationMiddleware:
             return self.get_response(request)
 
 
-        # 2️⃣ Vérifier token session
+        # 2️⃣ #Vérifier token session
         token = request.session.get("access_token")
 
         if not token:
