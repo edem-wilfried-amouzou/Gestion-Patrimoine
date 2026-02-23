@@ -66,7 +66,15 @@ INSTALLED_APPS = [
     'widget_tweaks',
     'gest_Pat_App',
     'api',
+
+    # Allauth
+    'django.contrib.sites',
+    'allauth',
+    'allauth.account',
+    'allauth.socialaccount',
+    'allauth.socialaccount.providers.google',
 ]
+SITE_ID = 1
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -77,7 +85,8 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 
-    'gest_Pat_App.middleware.TokenVerificationMiddleware'
+    # 'gest_Pat_App.middleware.TokenVerificationMiddleware',
+    'allauth.account.middleware.AccountMiddleware'
 ]
 
 ROOT_URLCONF = 'gestion_patrinoine.urls'
@@ -188,3 +197,25 @@ EMAIL_HOST_PASSWORD = 'doyk gdoy bqwq rmil'
 # gestionpat@2026
 
 PASSWORD_RESET_TIMEOUT = 3600  # 1 heure en secondes
+
+SOCIALACCOUNT_PROVIDERS = {
+    'google': {
+        'SCOPE': ['profile', 'email'],
+        'AUTH_PARAMS': {'access_type': 'online'},
+        'OAUTH_PKCE_ENABLED': True,
+
+    }
+}
+
+SOCIALACCOUNT_LOGIN_ON_GET = True
+SOCIALACCOUNT_AUTO_SIGNUP = True
+ACCOUNT_USERNAME_REQUIRED = False
+ACCOUNT_EMAIL_REQUIRED = False
+ACCOUNT_EMAIL_VERIFICATION = 'none'
+SOCIALACCOUNT_EMAIL_VERIFICATION = 'none'
+SOCIALACCOUNT_EMAIL_REQUIRED = False
+
+LOGIN_REDIRECT_URL = '/dashboard/'
+ACCOUNT_DEFAULT_HTTP_PROTOCOL = 'http'
+SOCIALACCOUNT_ADAPTER = 'gest_Pat_App.adapters.GoogleOAuthAdapter'
+LOGIN_REDIRECT_URL = '/dashboard/'
