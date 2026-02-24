@@ -79,6 +79,7 @@ def Sign_in(request):
             login(request, user)
             request.session["access_token"] = response.json().get("access_token")
             request.session["username"] = username
+            request.session["login_time"] = timezone.now().isoformat()  # ✅ Ajouter
             request.session.save()
             return redirect('dash')
 
@@ -89,14 +90,31 @@ def Sign_in(request):
                 attempt, created = SignInAttempt.objects.get_or_create(user=user_obj)
                 attempt.attempt += 1
                 attempt.save()
-
                 essais_restants = MAX_ATTEMPTS - attempt.attempt
+
                 if essais_restants <= 0:
+                    attempt.attempt=0
+                    attempt.save()
                     # Blocage du compte
                     user_obj.is_active = False
                     user_obj.save()
+                    admin_emails = list(User.objects.filter(is_superuser=True).values_list('email', flat=True))
+                    print(admin_emails)
+                    if admin_emails:
+                        try:
+                            email = EmailMessage(
+                                subject=f'ALERTE : Utilisateur {user_obj.username} bloqué',                                body=f"Suite a 3 tentetives echoue, l'utilisateur a ete bloque",
+                                from_email=settings.EMAIL_HOST_USER,
+                                to=admin_emails
+                            )
+                            email.send(fail_silently=False)
+                            print(f"Notification envoyée aux admins : {admin_emails}")
+
+                        except Exception as e:
+                            print(f"Erreur notification admin : {e}")
                     return render(request, 'sign_in.html',
-                                  {"error": "Votre compte est bloqué, contactez l'administrateur."})
+                                  {"error": "Votre compte est bloqué, contactez l'administrateur.",
+                                   "blocked": 1})
                 else:
                     return render(request, 'sign_in.html',
                                   {"error": f"Login incorrect. {essais_restants} essais restants."})
@@ -993,3 +1011,41 @@ class PatrimoineForm(forms.ModelForm):
                 self.add_error('longitude', 'La longitude doit être entre -180 et 180')
         
         return cleaned_data
+
+
+
+def contAD(request):
+    if request.method == 'POST':
+        username = request.POST.get('username')
+
+        try:
+            user_obj = User.objects.get(username=username)
+            admin_emails = list(User.objects.filter(is_superuser=True).values_list('email', flat=True))
+
+            if admin_emails:
+                subject = f"Demande de déblocage de compte : {username}"
+                body = f"""
+                L'utilisateur {username} ({user_obj.email}) vient de cliquer sur le bouton de demande de déblocage.
+                
+                Son compte a été suspendu après plusieurs tentatives infructueuses.
+                Vous pouvez le réactiver ici : {request.build_absolute_uri('/admin/')}
+                """
+
+                send_mail(
+                    subject,
+                    body,
+                    settings.EMAIL_HOST_USER,
+                    admin_emails,
+                    fail_silently=False
+                )
+                print("df")
+                redirect("sign_in.html")
+                # On informe l'utilisateur que c'est fait
+                return render(request, 'sign_in.html', {
+                    "success": "L'administrateur a été notifié de votre demande."
+                })
+
+        except User.DoesNotExist:
+            return redirect('sign_in')
+
+    return redirect('sign_in')

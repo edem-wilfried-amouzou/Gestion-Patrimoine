@@ -84,9 +84,9 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'allauth.account.middleware.AccountMiddleware',
 
-    # 'gest_Pat_App.middleware.TokenVerificationMiddleware',
-    'allauth.account.middleware.AccountMiddleware'
+    'gest_Pat_App.middleware.TokenVerificationMiddleware',
 ]
 
 ROOT_URLCONF = 'gestion_patrinoine.urls'
@@ -193,7 +193,7 @@ EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'gestpat99@gmail.com'
-EMAIL_HOST_PASSWORD = 'doyk gdoy bqwq rmil'
+EMAIL_HOST_PASSWORD = 'uztg xibk zzcl kotz'
 # gestionpat@2026
 
 PASSWORD_RESET_TIMEOUT = 3600  # 1 heure en secondes
@@ -207,15 +207,39 @@ SOCIALACCOUNT_PROVIDERS = {
     }
 }
 
-SOCIALACCOUNT_LOGIN_ON_GET = True
-SOCIALACCOUNT_AUTO_SIGNUP = True
+# SOCIALACCOUNT_LOGIN_ON_GET = True
+# SOCIALACCOUNT_AUTO_SIGNUP = True
+# ACCOUNT_USERNAME_REQUIRED = False
+# ACCOUNT_EMAIL_REQUIRED = False
+# ACCOUNT_EMAIL_VERIFICATION = 'none'
+# SOCIALACCOUNT_EMAIL_VERIFICATION = 'none'
+# SOCIALACCOUNT_EMAIL_REQUIRED = False
+#
+# ACCOUNT_USER_MODEL_USERNAME_FIELD = 'username'
+# # SOCIALACCOUNT_AUTO_SIGNUP = True
+ACCOUNT_ADAPTER = 'allauth.account.adapter.DefaultAccountAdapter'
+# SOCIALACCOUNT_ADAPTER = 'allauth.socialaccount.adapter.DefaultSocialAccountAdapter'
+# # ACCOUNT_EMAIL_VERIFICATION = "none"
+# ACCOUNT_LOGIN_METHODS = {'email'}
+# ACCOUNT_SIGNUP_FIELDS = ['email']
+
+# Authentification
+ACCOUNT_AUTHENTICATION_METHOD = 'email'
+ACCOUNT_EMAIL_REQUIRED = True
 ACCOUNT_USERNAME_REQUIRED = False
-ACCOUNT_EMAIL_REQUIRED = False
+ACCOUNT_USER_MODEL_USERNAME_FIELD = 'username'
+
+# Flux automatique
+SOCIALACCOUNT_AUTO_SIGNUP = True
+SOCIALACCOUNT_LOGIN_ON_GET = True
 ACCOUNT_EMAIL_VERIFICATION = 'none'
 SOCIALACCOUNT_EMAIL_VERIFICATION = 'none'
-SOCIALACCOUNT_EMAIL_REQUIRED = False
 
+# Redirection
 LOGIN_REDIRECT_URL = '/dashboard/'
+
+# Pour Django 6.0 (Évite les warnings)
+ACCOUNT_LOGIN_METHODS = {'email'}
+ACCOUNT_SIGNUP_FIELDS = ['email']
+
 ACCOUNT_DEFAULT_HTTP_PROTOCOL = 'http'
-SOCIALACCOUNT_ADAPTER = 'gest_Pat_App.adapters.GoogleOAuthAdapter'
-LOGIN_REDIRECT_URL = '/dashboard/'

@@ -38,9 +38,12 @@
 #         #     return redirect("sign_in")
 #
 #         return self.get_response(request)
+from datetime import timedelta
 
+import current_path
 from django.shortcuts import redirect
 from django.contrib.auth import logout
+from django.utils import timezone
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import AccessToken
 
@@ -53,6 +56,7 @@ PUBLIC_PATHS = [
     "/reset/",
     "/password-reset/",
     "/accounts/",
+    "/social/"
 ]
 
 class TokenVerificationMiddleware:
@@ -63,12 +67,22 @@ class TokenVerificationMiddleware:
     def __call__(self, request):
 
         # 1️⃣ Autoriser routes publiques
-        if any(request.path.startswith(path) for path in PUBLIC_PATHS):
+        is_public = any(request.path.startswith(p) for p in PUBLIC_PATHS)
+        if is_public or "/accounts/" in request.path:
             return self.get_response(request)
 
         if request.path == "/":
             return self.get_response(request)
 
+        if request.user.is_authenticated and not request.session.get("access_token"):
+            # ...Alors on génère le token immédiatement ici !
+            access = AccessToken.for_user(request.user)
+            request.session["access_token"] = str(access)
+            request.session["username"] = request.user.username
+            request.session["login_time"] = timezone.now().isoformat()
+            request.session.save()
+            print(f"DEBUG: Token généré à la volée pour {request.user.username} sur {request.path}")
+            return self.get_response(request)
 
         # 2️⃣ Vérifier token session
         token = request.session.get("access_token")
@@ -86,4 +100,17 @@ class TokenVerificationMiddleware:
             request.session.flush()
             return redirect("sign_in")
 
+        # login_time_str = request.session.get("login_time")
+        # if login_time_str:
+        #     login_time = timezone.datetime.fromisoformat(login_time_str)
+        #     if timezone.is_naive(login_time):
+        #         login_time = timezone.make_aware(login_time)
+        #     if timezone.now() - login_time > timedelta(minutes=5):
+        #         logout(request)
+        #         request.session.flush()
+        #         return redirect("sign_in")
+
         return self.get_response(request)
+
+
+
