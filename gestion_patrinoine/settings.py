@@ -112,11 +112,19 @@ WSGI_APPLICATION = 'gestion_patrinoine.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.sqlite3',
+#         'NAME': BASE_DIR / 'db.sqlite3',
+#     }
+# }
+import dj_database_url
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    'ENGINE': 'django.db.backends.mysql',
+    'default': dj_database_url.config(
+        default=config('DATABASE_URL'),
+        conn_max_age=600,  # Garde la connexion ouverte pour plus de rapidité
+    )
 }
 
 # from decouple import config
