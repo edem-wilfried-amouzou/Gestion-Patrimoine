@@ -173,6 +173,30 @@ def Sign_up(request):
                 return render(request, "sign_up.html", { "error": msg})
 
             if response.status_code == 201:
+                subject = "Bienvenue sur Gestion Patrimoine !"
+                message = f"""
+                        Bonjour {username},
+
+                        Merci de vous être inscrit sur notre plateforme Gestion Patrimoine.
+                        Votre compte a été créé avec succès.
+
+                        Vous pouvez maintenant vous connecter en utilisant votre nom d'utilisateur : {username}
+
+                        Lien de connexion : {request.build_absolute_uri('/sign_in/')}
+
+                        À bientôt !
+                        L'équipe de Gestion Patrimoine.
+                        """
+                try:
+                    send_mail(
+                        subject=subject,
+                        message=message,
+                        from_email=settings.DEFAULT_FROM_EMAIL,
+                        recipient_list=[email],  # L'email saisi dans le formulaire
+                        fail_silently=False,
+                    )
+                except Exception as e:
+                    print(f"Erreur envoi mail inscription : {e}")
                 redirect("sign_in")
                 return render(request, "sign_in.html")
         else:
