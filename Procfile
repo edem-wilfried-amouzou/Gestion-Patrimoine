@@ -1,2 +1,1 @@
-web: gunicorn gestion_patrinoine.wsgi --log-file -
-
+web: gunicorn gestion_patrinoine.wsgi --bind 0.0.0.0:$PORT --log-file -
