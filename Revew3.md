@@ -1,4 +1,13 @@
-# Changement de nos gest_Pat_App sign_in 
+# Objectif : Supprimer les appels http recursifs internes
+
+    Ces appels (request.post()) créent des loop occupant la mémoire et en mode free sur render. Nous devons éviter ceci au maximumm
+    Solution 1 : Séparer l'api du projet et le mettre en module.
+    Solution 2 : Garder mais ne pas l'utiliser en faisant la vérification simple par User.Objects.filter
+
+    Dans mon cas : Moi daniel j'ai opté pour le 2
+
+# Changement de nos gest_Pat_App sign_in
+
 ```
 def Sign_in(request):
     if request.method == 'POST':
@@ -51,14 +60,12 @@ def Sign_in(request):
 
 # Changement de nos gest_Pat_App sign_up
 
-
-
 def Sign_up(request):
-    if request.method == 'POST':
-        username = request.POST.get('username')
-        email = request.POST.get('email')
-        pw = request.POST.get('pw')
-        rp = request.POST.get('re-pw')
+if request.method == 'POST':
+username = request.POST.get('username')
+email = request.POST.get('email')
+pw = request.POST.get('pw')
+rp = request.POST.get('re-pw')
 
         if not all([username, email, pw, rp]):
             return render(request, "sign_up.html", {"error": "Tous les champs sont obligatoires"})
