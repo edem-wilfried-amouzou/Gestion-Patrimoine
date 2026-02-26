@@ -29,7 +29,7 @@
     --gray-800: #1e293b;
 
     --nav-h:    56px;
-    --footer-h: 145px;
+    --footer-h: 180px;
     --radius:   10px;
     --radius-sm: 6px;
     --shadow:   0 4px 24px rgba(0,30,100,0.18);
@@ -250,7 +250,7 @@ body {
     overflow: hidden;
     position: relative;
     min-height: 0;
-    height: 20vh; /* default map height = 60% of viewport */
+    height: 75vh; /* default map height = 60% of viewport */
 }
 .map-container {
     position: absolute;
