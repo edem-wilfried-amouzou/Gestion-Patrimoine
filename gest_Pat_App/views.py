@@ -59,7 +59,7 @@ def Sign_in(request):
 
         # Appel API
         response = requests.post(
-            "http://127.0.0.1:8000/api/sign_in/",
+            "gestion-patrimoine-b3hj.onrender.com/api/sign_in/",
             json={"username": username, "password": password}
         )
 
@@ -158,7 +158,7 @@ def Sign_up(request):
 
         if pw == rp:
             response = requests.post(
-                "http://127.0.0.1:8000/api/sign_up/",
+                "gestion-patrimoine-b3hj.onrender.com/api/sign_up/",
                 json={
                     "username": username,
                     "email": email,
