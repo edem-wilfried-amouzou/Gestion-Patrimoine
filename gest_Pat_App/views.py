@@ -59,7 +59,7 @@ def Sign_in(request):
 
         # Appel API
         response = requests.post(
-            "http://127.0.0.1:8000/api/sign_in/",
+            request.build_absolute_uri("/api/sign_in/"),
             json={"username": username, "password": password}
         )
 
@@ -140,12 +140,12 @@ def Sign_up(request):
 
         if pw == rp:
             response = requests.post(
-                "http://127.0.0.1:8000/api/sign_up/",
+                request.build_absolute_uri("/api/sign_up/"),
                 json={
-                    "username": username,
-                    "email": email,
-                    "password": pw
-                }
+                                "username": username,
+                                "email": email,
+                                "password": pw
+                            }
             )
 
             if response.status_code == 400:
