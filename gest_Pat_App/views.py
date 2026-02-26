@@ -40,6 +40,7 @@ from django.core.mail import send_mail
 from django.urls import reverse
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
+from rest_framework_simplejwt.tokens import RefreshToken
 
 
 
@@ -51,23 +52,13 @@ def home(request):
 MAX_ATTEMPTS = 3
 
 def Sign_in(request):
-    print("SIGN in VIEW")
-
     if request.method == 'POST':
         username = request.POST.get('username')
         password = request.POST.get('password')
 
-        # Appel API
-        response = requests.post(
-            request.build_absolute_uri("/api/sign_in/"),
-            json={"username": username, "password": password}
-        )
-
-        # Tenter d'authentifier l'utilisateur localement
         user = authenticate(request, username=username, password=password)
 
-        if response.status_code == 200 and user is not None:
-            # Login OK
+        if user is not None:
             if not user.is_active:
                 return render(request, 'sign_in.html', {"error": "Compte bloqué, contactez l'administrateur."})
 
@@ -76,14 +67,18 @@ def Sign_in(request):
             attempt.attempt = 0
             attempt.save()
 
+            # Générer JWT directement sans appel HTTP
+            refresh = RefreshToken.for_user(user)
+            access_token = str(refresh.access_token)
+
             login(request, user)
-            request.session["access_token"] = response.json().get("access_token")
+            request.session["access_token"] = access_token
             request.session["username"] = username
             request.session.save()
             return redirect('dash')
 
-        elif response.status_code == 401:
-            # username correct, password incorrect
+        else:
+            # Vérifier si username existe
             try:
                 user_obj = User.objects.get(username=username)
                 attempt, created = SignInAttempt.objects.get_or_create(user=user_obj)
@@ -92,7 +87,6 @@ def Sign_in(request):
 
                 essais_restants = MAX_ATTEMPTS - attempt.attempt
                 if essais_restants <= 0:
-                    # Blocage du compte
                     user_obj.is_active = False
                     user_obj.save()
                     return render(request, 'sign_in.html',
@@ -101,78 +95,42 @@ def Sign_in(request):
                     return render(request, 'sign_in.html',
                                   {"error": f"Login incorrect. {essais_restants} essais restants."})
             except User.DoesNotExist:
-                # Le username n'existe pas, mais on le gère côté API
                 return render(request, 'sign_in.html', {"error": "Login invalide."})
-
-        elif response.status_code == 400:
-            # username invalide
-            return render(request, 'sign_in.html', {"error": "Login invalide."})
-
-        else:
-            return render(request, 'sign_in.html', {"error": "Erreur de connexion, réessayez."})
 
     return render(request, "sign_in.html")
 
 # ---------------------------------Sign_up---------------------------------------------------
 
 def Sign_up(request):
-    print("SIGN UP VIEW")
     if request.method == 'POST':
         username = request.POST.get('username')
         email = request.POST.get('email')
         pw = request.POST.get('pw')
         rp = request.POST.get('re-pw')
 
-        if not pw or not rp:
-            return render(request, "sign_up.html", {
-                "error": "Tous les champs sont obligatoires"
-            })
+        if not all([username, email, pw, rp]):
+            return render(request, "sign_up.html", {"error": "Tous les champs sont obligatoires"})
 
         try:
             validate_password(pw)
         except ValidationError as e:
-            errors = e.messages
-            redirect("sign_up")
-            return render(request, "sign_up.html", {
-                "error": errors
-            })
+            return render(request, "sign_up.html", {"error": e.messages})
 
+        if pw != rp:
+            return render(request, "sign_up.html", {"error": "Les mots de passe ne correspondent pas"})
 
-        if pw == rp:
-            response = requests.post(
-                request.build_absolute_uri("/api/sign_up/"),
-                json={
-                                "username": username,
-                                "email": email,
-                                "password": pw
-                            }
-            )
+        if User.objects.filter(username=username).exists():
+            return render(request, "sign_up.html", {"error": "Ce nom d'utilisateur existe déjà"})
 
-            if response.status_code == 400:
-                error = response.json().get("error")
-                msg = str(error)
-                redirect("sign_up")
-                return render(request, "sign_up.html", { "error": msg})
+        if User.objects.filter(email=email).exists():
+            return render(request, "sign_up.html", {"error": "Cet email est déjà utilisé"})
 
-            if response.status_code == 201:
-                redirect("sign_in")
-                return render(request, "sign_in.html")
-        else:
-            redirect("sign_up")
-            return render(request, "sign_up.html", {
-                "error": "Les mots de passes ne correspondent pas"
-            })
+        User.objects.create_user(username=username, email=email, password=pw)
+        return render(request, "sign_in.html")
 
-    redirect("sign_up")
     return render(request, "sign_up.html")
 
-        # else:
-        #     msg="Password not valid"
-        #     context = {"msg": msg}
-        #     redirect("sign_in")
-        #     return render(request, "sign_up.html", context)
-
-    return render(request, "sign_up.html", context)
+        
 
 # -----------------------------------------logout---------------------------------------------------
 
