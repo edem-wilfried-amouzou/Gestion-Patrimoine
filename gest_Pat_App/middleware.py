@@ -54,6 +54,8 @@ PUBLIC_PATHS = [
     "/auth/google/login/",
     "/auth/google/callback/",
     "/password-reset/",
+    "/static/",
+    "/media/",
 ]
 
 class TokenVerificationMiddleware:

@@ -176,3 +176,10 @@ EMAIL_HOST_PASSWORD = 'doyk gdoy bqwq rmil'
 # gestionpat@2026
 
 PASSWORD_RESET_TIMEOUT = 3600  # 1 heure en secondes
+
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+USE_X_FORWARDED_HOST = True
+
+CSRF_TRUSTED_ORIGINS = [
+    "https://gestion-patrimoine-2g4e.onrender.com",
+]
