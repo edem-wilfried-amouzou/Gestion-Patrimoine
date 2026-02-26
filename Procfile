@@ -1,0 +1,1 @@
+web: ./build.sh && gunicorn gestion_patrinoine.wsgi
