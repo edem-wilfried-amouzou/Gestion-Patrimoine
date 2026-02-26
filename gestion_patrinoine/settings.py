@@ -15,14 +15,14 @@ from decouple import config
 from datetime import timedelta
 
 import os
-from django.core.management.utils import get_random_secret_key
-print(get_random_secret_key())
+# from django.core.management.utils import get_random_secret_key
+# print(get_random_secret_key())
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=2),
-    # "ACCESS_TOKEN_LIFETIME": timedelta(seconds=30),
+    # "ACCESS_TOKEN_LIFETIME": timedelta(minutes=30),
+    "ACCESS_TOKEN_LIFETIME": timedelta(seconds=30),
 }
 
 
@@ -101,6 +101,8 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+            
+                
             ],
         },
     },
@@ -118,38 +120,17 @@ WSGI_APPLICATION = 'gestion_patrinoine.wsgi.application'
 #         'NAME': BASE_DIR / 'db.sqlite3',
 #     }
 # }
-import dj_database_url
+
 DATABASES = {
-    'ENGINE': 'django.db.backends.mysql',
-    'default': dj_database_url.config(
-        default=config('DATABASE_URL'),
-        conn_max_age=600,  # Garde la connexion ouverte pour plus de rapidité
-    )
+    'default': {
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': config('DB_NAME'),
+        'USER': config('DB_USER'),
+        'PASSWORD': config('DB_PASSWORD'),
+        'HOST': config('DB_HOST'),
+        'PORT': config('DB_PORT'),
+    }
 }
-
-# from decouple import config
-# ... (reste du code)
-
-# DATABASES = {
-#     'default': {
-#         # # 'ENGINE': 'mysql.connector.django',
-#         # 'ENGINE': 'django.db.backends.mysql',
-#         # 'NAME': config('DB_NAME'),
-#         # 'USER': config('DB_USER'),
-#         # 'PASSWORD': config('DB_PASSWORD'),
-#         # 'HOST': config('DB_HOST'),
-#         # 'PORT': config('DB_PORT'),
-
-#     DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.sqlite3',
-#         'NAME': BASE_DIR / 'db.sqlite3',
-#     }
-# }
-
-
-
-# Profites-en aussi pour sécuriser ta SECRET_KEY et le DEBUG
 
 
 
@@ -208,46 +189,38 @@ PASSWORD_RESET_TIMEOUT = 3600  # 1 heure en secondes
 
 SOCIALACCOUNT_PROVIDERS = {
     'google': {
-        'SCOPE': ['profile', 'email'],
-        'AUTH_PARAMS': {'access_type': 'online'},
-        'OAUTH_PKCE_ENABLED': True,
+        # 'SCOPE': ['profile', 'email'],
+        # 'AUTH_PARAMS': {'access_type': 'online'},
+        # 'OAUTH_PKCE_ENABLED': True,
+         'APP': {
+            'client_id': config('GOOGLE_CLIENT_ID'),
+            'secret': config('GOOGLE_CLIENT_SECRET'),
+            'key': ''
+        },
+         'AUTH_PARAMS': {
+            'access_type': 'online',
+            'prompt': 'select_account consent login',  # ← forcer choix compte + mot de passe
+            'max_age': '0',  
+        },
 
     }
 }
 
-# SOCIALACCOUNT_LOGIN_ON_GET = True
-# SOCIALACCOUNT_AUTO_SIGNUP = True
-# ACCOUNT_USERNAME_REQUIRED = False
-# ACCOUNT_EMAIL_REQUIRED = False
-# ACCOUNT_EMAIL_VERIFICATION = 'none'
-# SOCIALACCOUNT_EMAIL_VERIFICATION = 'none'
-# SOCIALACCOUNT_EMAIL_REQUIRED = False
-#
-# ACCOUNT_USER_MODEL_USERNAME_FIELD = 'username'
-# # SOCIALACCOUNT_AUTO_SIGNUP = True
-ACCOUNT_ADAPTER = 'allauth.account.adapter.DefaultAccountAdapter'
-# SOCIALACCOUNT_ADAPTER = 'allauth.socialaccount.adapter.DefaultSocialAccountAdapter'
-# # ACCOUNT_EMAIL_VERIFICATION = "none"
-# ACCOUNT_LOGIN_METHODS = {'email'}
-# ACCOUNT_SIGNUP_FIELDS = ['email']
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',
+    'allauth.account.auth_backends.AuthenticationBackend',
+    
+]
+LOGIN_REDIRECT_URL = 'dash'
+LOGOUT_REDIRECT_URL = 'home'
+SOCIALACCOUNT_LOGIN_ON_GET = True
+SOCIALACCOUNT_EMAIL_AUTHENTICATION = True
 
-# Authentification
-ACCOUNT_AUTHENTICATION_METHOD = 'email'
 ACCOUNT_EMAIL_REQUIRED = True
 ACCOUNT_USERNAME_REQUIRED = False
-ACCOUNT_USER_MODEL_USERNAME_FIELD = 'username'
-
-# Flux automatique
-SOCIALACCOUNT_AUTO_SIGNUP = True
-SOCIALACCOUNT_LOGIN_ON_GET = True
+ACCOUNT_AUTHENTICATION_METHOD = 'email'
 ACCOUNT_EMAIL_VERIFICATION = 'none'
-SOCIALACCOUNT_EMAIL_VERIFICATION = 'none'
 
-# Redirection
-LOGIN_REDIRECT_URL = '/dashboard/'
 
-# Pour Django 6.0 (Évite les warnings)
-ACCOUNT_LOGIN_METHODS = {'email'}
-ACCOUNT_SIGNUP_FIELDS = ['email']
 
 ACCOUNT_DEFAULT_HTTP_PROTOCOL = 'http'

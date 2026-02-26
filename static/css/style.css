@@ -244,8 +244,20 @@ body {
 /* ═══════════════════════════════════════════════════════════
    CARTE
    ═══════════════════════════════════════════════════════════ */
-.map-wrapper { flex: 1; overflow: hidden; position: relative; min-height: 0; }
-.map-container { position: absolute; inset: 0; width: 100%; height: 100%; }
+.map-wrapper {
+    /* fixed viewport height instead of flex:1 so footer/cards below gain more space */
+    flex: none;
+    overflow: hidden;
+    position: relative;
+    min-height: 0;
+    height: 20vh; /* default map height = 60% of viewport */
+}
+.map-container {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+}
 
 /* ═══════════════════════════════════════════════════════════
    FOOTER  —  z-index 1050
@@ -421,6 +433,28 @@ body {
     background: rgba(0,10,30,0.75);
     backdrop-filter: blur(4px);
     pointer-events: all;
+}
+
+/* ── Responsive pour modals sur mobile ── */
+@media (max-width: 768px) {
+    #addPatrimoineModal {
+        align-items: center; 
+        justify-content: center;
+        padding: 16px;
+        background: rgba(0,10,30,0.75);
+        backdrop-filter: blur(4px);
+        pointer-events: all;
+    }
+    
+    #addPatrimoineModal .modal-box {
+        margin: 0;
+        max-height: 90vh; 
+        max-width: 100%;
+    }
+    
+    .modal-box {
+        max-width: 100%;
+    }
 }
 
 /* Boîte commune */
@@ -655,27 +689,451 @@ body {
 /* ═══════════════════════════════════════════════════════════
    RESPONSIVE
    ═══════════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════════
+   RESPONSIVE
+   ═══════════════════════════════════════════════════════════ */
 @media (max-width: 900px) {
     /* Masquer le label des boutons GPX/PDF sur tablette */
     .btn-nav--gpx span, .btn-nav--pdf span { display: none; }
     .btn-nav--gpx, .btn-nav--pdf { padding: 7px 10px; }
+    /* largeur de la carte légèrement réduite pour laisser plus de place dessous */
+    .map-wrapper { height: 55vh; }
+}
+
+@media (max-width: 768px) {
+    .navbar {
+        height: 50px;
+        padding: 0 12px;
+        flex-wrap: wrap;
+    }
+    
+    .navbar-actions {
+        gap: 3px;
+        flex-wrap: wrap;
+    }
+    
+    .btn-nav {
+        padding: 6px 8px;
+        font-size: 12px;
+    }
+    
+    .brand-sub, .brand-name em {
+        display: none;
+    }
+    
+    .nav-sep {
+        display: none;
+    }
+    
+    .side-panel {
+        left: 8px;
+        right: 8px;
+        width: auto;
+        max-width: calc(100vw - 16px);
+    }
+    
+    .footer-top {
+        padding: 5px 12px;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    
+    .cards-scroll {
+        padding: 5px 12px;
+    }
+    
+    .patrimoine-card {
+        width: 180px;
+    }
+    .map-wrapper { height: 50vh; }
 }
 
 @media (max-width: 640px) {
-    .brand-sub, .btn-nav span, .toggle-btn span, .btn-nav--danger span { display: none; }
-    .btn-nav { padding: 7px 10px; }
-    .navbar { padding: 0 10px; }
-    .navbar-actions { gap: 4px; }
-    .side-panel { left: 10px; right: 10px; width: auto; }
-    .footer-top { padding: 5px 12px; }
-    .cards-scroll { padding: 5px 12px; }
+    .brand-sub, .btn-nav span, .toggle-btn span, .btn-nav--danger span { 
+        display: none; 
+    }
+    
+    .btn-nav { 
+        padding: 6px 8px;
+        font-size: 11px;
+    }
+    
+    .navbar { 
+        padding: 0 8px;
+        height: 48px;
+    }
+    
+    .navbar-brand {
+        gap: 6px;
+    }
+    
+    .brand-icon {
+        width: 30px;
+        height: 30px;
+        font-size: 13px;
+    }
+    
+    .navbar-actions { 
+        gap: 3px; 
+    }
+    
+    .side-panel { 
+        left: 8px; 
+        right: 8px; 
+        width: auto;
+    }
+    
+    .footer-top { 
+        padding: 4px 10px;
+        flex-direction: column;
+        gap: 6px;
+    }
+    
+    .footer-right {
+        width: 100%;
+        justify-content: space-between;
+    }
+    
+    .cards-scroll { 
+        padding: 4px 10px; 
+    }
+    
+    .patrimoine-card {
+        width: 160px;
+        padding: 6px 8px;
+    }
+    .map-wrapper { height: 48vh; }
 
     #addPatrimoineModal {
-        align-items: center; justify-content: center;
+        align-items: center; 
+        justify-content: center;
         padding: 16px;
         background: rgba(0,10,30,0.75);
         backdrop-filter: blur(4px);
         pointer-events: all;
     }
-    #addPatrimoineModal .modal-box { margin: 0; max-height: 90vh; max-width: 100%; }
+    
+    #addPatrimoineModal .modal-box { 
+        margin: 0;
+        max-height: 90vh; 
+        max-width: 100%; 
+    }
+    
+    .modal-box {
+        max-width: 100%;
+    }
+    
+    .footer {
+        height: auto;
+    }
+    
+    .footer-title {
+        font-size: 12px;
+    }
+    
+    .stat-chip {
+        font-size: 10px;
+    }
+    
+    .legend {
+        font-size: 10px;
+    }
+}
+
+@media (max-width: 480px) {
+    .navbar {
+        padding: 0 6px;
+        height: 44px;
+    }
+    
+    .brand-icon {
+        width: 28px;
+        height: 28px;
+        font-size: 12px;
+    }
+    
+    .btn-nav {
+        padding: 5px 6px;
+        font-size: 10px;
+    }
+    
+    .btn-nav i {
+        font-size: 12px;
+    }
+    
+    .user-btn {
+        width: 30px;
+        height: 30px;
+        font-size: 12px;
+    }
+    
+    .nav-sep {
+        display: none;
+    }
+    
+    .mode-chip {
+        font-size: 10px;
+        padding: 4px 8px;
+    }
+    
+    .mode-chip.hidden {
+        display: none;
+    }
+    
+    .footer-top {
+        padding: 3px 8px;
+    }
+    
+    .footer-title {
+        font-size: 11px;
+    }
+    
+    .count-badge {
+        font-size: 8px;
+        padding: 1px 5px;
+    }
+    
+    .cards-scroll {
+        padding: 3px 8px;
+    }
+    
+    .patrimoine-card {
+        width: 140px;
+        padding: 5px 6px;
+    }
+    .map-wrapper { height: 45vh; }
+    
+    .card-number {
+        width: 24px;
+        height: 24px;
+        font-size: 10px;
+    }
+    
+    .card-name {
+        font-size: 11px;
+    }
+    
+    .card-coords {
+        font-size: 9px;
+    }
+    
+    .toggle-btn {
+        padding: 3px 8px;
+        font-size: 10px;
+    }
+    
+    .side-panel {
+        bottom: calc(var(--footer-h) + 10px);
+        width: calc(100vw - 16px);
+        max-width: 100%;
+    }
+    
+    .modal-box {
+        border-radius: 8px;
+    }
+    
+    .info-bar {
+        font-size: 11px;
+        padding: 5px 10px;
+    }
+    
+    .empty-state {
+        font-size: 12px;
+    }
+}
+
+@media (max-width: 360px) {
+    .navbar {
+        padding: 0 4px;
+        height: 40px;
+    }
+    
+    .brand-text {
+        display: none;
+    }
+    
+    .brand-icon {
+        width: 26px;
+        height: 26px;
+        font-size: 11px;
+    }
+    
+    .btn-nav {
+        padding: 4px 5px;
+        font-size: 9px;
+    }
+    
+    .navbar-brand {
+        gap: 4px;
+    }
+    
+    .footer-top {
+        padding: 2px 6px;
+    }
+    
+    .cards-scroll {
+        padding: 2px 6px;
+    }
+    
+    .patrimoine-card {
+        width: 130px;
+    }
+    
+    .side-panel {
+        width: calc(100vw - 12px);
+    }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   OPTIMISATIONS SUPPLÉMENTAIRES POUR MOBILE
+   ═══════════════════════════════════════════════════════════ */
+@media (max-width: 600px) {
+    body {
+        font-size: 13px;
+    }
+    
+    .navbar-actions button,
+    .navbar-actions a {
+        min-width: auto;
+    }
+    
+    .modal-box {
+        border-radius: 12px;
+    }
+    
+    .field-input, .field-select {
+        font-size: 16px;
+    }
+    
+    #addPatrimoineModal .modal-box {
+        margin-top: calc(var(--nav-h) + 8px);
+        margin-left: 8px;
+        margin-right: 8px;
+        width: auto;
+        max-width: calc(100vw - 16px);
+    }
+}
+
+@media (max-width: 480px) {
+    /* Améliorer la lisibilité sur très petit écran */
+    .card-btn {
+        padding: 5px 4px;
+        font-size: 9px;
+    }
+    
+    .card-btn i {
+        font-size: 10px;
+    }
+    
+    .field-label {
+        font-size: 10px;
+        margin-bottom: 4px;
+    }
+    
+    .modal-form {
+        gap: 10px;
+        padding: 12px;
+    }
+    
+    .field-group {
+        gap: 3px;
+    }
+    
+    .field-row {
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+    }
+    
+    .modal-footer-btns {
+        gap: 6px;
+    }
+    
+    .export-option {
+        padding: 12px 14px;
+        gap: 10px;
+    }
+    
+    .export-option-icon {
+        width: 38px;
+        height: 38px;
+        font-size: 16px;
+    }
+    
+    .export-option-title {
+        font-size: 12px;
+    }
+    
+    .export-option-desc {
+        font-size: 10px;
+    }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   OPTIMISATIONS POUR ÉCRAN TACTILE ET PETIT ÉCRAN
+   ═══════════════════════════════════════════════════════════ */
+@media (hover: none) and (pointer: coarse) {
+    /* Optimisation pour appareils tactiles */
+    .btn-nav, .btn-primary-full, .btn-teal-full, .btn-ghost-full,
+    .card-btn, .modal-close, .panel-close, .action-btn {
+        min-height: 44px;
+        min-width: 44px;
+    }
+    
+    .export-option {
+        min-height: 50px;
+    }
+    
+    .patrimoine-card {
+        padding: 8px 10px;
+    }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   ORIENTATION PAYSAGE MOBILE
+   ═══════════════════════════════════════════════════════════ */
+@media (max-height: 500px) and (orientation: landscape) {
+    .navbar {
+        height: 40px;
+        padding: 0 8px;
+    }
+    
+    .footer {
+        height: auto;
+        padding: 4px 0;
+    }
+    
+    .footer-top {
+        padding: 2px 8px;
+    }
+    
+    .cards-scroll {
+        padding: 2px 8px;
+    }
+    
+    .side-panel {
+        max-height: 80vh;
+    }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   AMÉLIORATION DU CONFORT TACTILE ET ACCESSIBILITÉ
+   ═══════════════════════════════════════════════════════════ */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* S'assurer que les inputs sont lisibles sur tous les appareils */
+@media (max-width: 600px) {
+    input[type="text"],
+    input[type="email"],
+    input[type="password"],
+    textarea,
+    select {
+        font-size: 16px;
+        padding: 10px 12px;
+    }
 }

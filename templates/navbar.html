@@ -2,14 +2,35 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Title</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+    <meta name="description" content="Navigation Gestion Patrimoine">
+    <title>Navigation</title>
     <link href="https://cdn.jsdelivr.net/npm/daisyui@5" rel="stylesheet" type="text/css" />
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <link href="https://cdn.jsdelivr.net/npm/daisyui@5/themes.css" rel="stylesheet" type="text/css" />
+    <style>
+        @media (max-width: 768px) {
+            .flex.justify-between.w-full {
+                flex-wrap: wrap;
+                padding: 0.5rem;
+            }
+            .px-20 {
+                padding: 0 1rem;
+            }
+        }
+        @media (max-width: 480px) {
+            .text-3xl {
+                font-size: 1.5rem;
+            }
+            .px-20 {
+                padding: 0 0.5rem;
+            }
+        }
+    </style>
 </head>
 <body>
-<div class="flex justify-between w-full py-2 pt-2 sticky bg-base-300 px-20">
-  <div class="text-blue-500 font-bold text-3xl">
+<div class="flex justify-between w-full py-2 pt-2 sticky bg-base-300 px-20 md:px-20 sm:px-4">
+  <div class="text-blue-500 font-bold text-3xl md:text-2xl sm:text-xl">
       Gest-Patrim
   </div>
   <div>
