@@ -53,6 +53,11 @@ MAX_ATTEMPTS = 3
 def Sign_in(request):
     print("SIGN in VIEW")
 
+    # if user is already authenticated, send them directly to the dashboard
+    # otherwise it feels like "login does nothing" when they revisit the form
+    if request.user.is_authenticated:
+        return redirect('dash')
+
     if request.method == 'POST':
         username = request.POST.get('username')
         password = request.POST.get('password')
@@ -81,6 +86,7 @@ def Sign_in(request):
             request.session["username"] = username
             request.session["login_time"] = timezone.now().isoformat()  # ✅ Ajouter
             request.session.save()
+            # once the session is established, go to the dashboard
             return redirect('dash')
 
         elif response.status_code == 401:

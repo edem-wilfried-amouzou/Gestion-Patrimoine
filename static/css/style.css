@@ -250,7 +250,7 @@ body {
     overflow: hidden;
     position: relative;
     min-height: 0;
-    height: 50vh; /* default map height = 60% of viewport */
+    height: 65vh; /* default map height = 60% of viewport */
 }
 .map-container {
     position: absolute;
@@ -297,8 +297,14 @@ body {
 .stat-chip i { color: var(--blue-200); }
 
 /* ── Cartes patrimoines ── */
+/* make the scrolling container a bit taller so the cards have more room
+   this also gives the user a larger "click" area and makes individual
+   patrimoine cards easier to read. adjust as needed. */
 .cards-scroll {
-    overflow-x: auto; padding: 7px 16px 6px;
+    overflow-x: auto;
+    /* increase padding and add a minimum height so the container is larger */
+    padding: 14px 20px 12px;
+    min-height: 215px;          /* ensures the footer expands to fit the cards */
     scrollbar-width: thin; scrollbar-color: var(--blue-500) rgba(255,255,255,0.05);
 }
 .cards-scroll::-webkit-scrollbar { height: 3px; }
@@ -306,11 +312,15 @@ body {
 .cards-scroll::-webkit-scrollbar-thumb { background: var(--blue-500); border-radius: 10px; }
 .cards-inner { display: flex; gap: 8px; min-width: max-content; }
 
+/* slightly bigger cards for readability */
 .patrimoine-card {
-    min-width: 200px; width: auto; background: rgba(255,255,255,0.06);
-    height: max;
+    min-width: 300px; /* was 200px */
+    width: auto; background: rgba(255,255,255,0.06);
+    /* allow card height to expand with content */
+    height: 120px;
     border: 1px solid rgba(255,255,255,0.1); border-radius: var(--radius);
-    padding: 8px 10px; cursor: pointer; display: flex; gap: 8px;
+    padding: 12px 14px; /* more internal space */
+    cursor: pointer; display: flex; gap: 10px;
     align-items: flex-start; transition: all 0.18s ease;
     position: relative; overflow: hidden; flex-shrink: 0;
 }

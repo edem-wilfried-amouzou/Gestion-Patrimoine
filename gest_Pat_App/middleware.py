@@ -74,7 +74,7 @@ class TokenVerificationMiddleware:
         if request.path == "/":
             return self.get_response(request)
 
-        if request.user.is_authenticated and not request.session.get("access_token"):
+        if request.user.is_authenticated :
             # ...Alors on génère le token immédiatement ici !
             access = AccessToken.for_user(request.user)
             request.session["access_token"] = str(access)
