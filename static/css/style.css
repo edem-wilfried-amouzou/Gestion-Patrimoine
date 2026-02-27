@@ -250,7 +250,7 @@ body {
     overflow: hidden;
     position: relative;
     min-height: 0;
-    height: 75vh; /* default map height = 60% of viewport */
+    height: 60vh; /* default map height = 60% of viewport */
 }
 .map-container {
     position: absolute;
